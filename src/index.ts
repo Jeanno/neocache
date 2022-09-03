@@ -55,6 +55,4 @@ export class Memcache {
   }
 }
 
-const defaultMemcache = new Memcache();
-
-export default defaultMemcache;
+export const defaultMemcache = new Memcache();

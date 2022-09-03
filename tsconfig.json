@@ -4,6 +4,7 @@
     "outDir": "./dist",
     "target": "es5",
     "module": "commonjs",
+    "declaration": true,
     "moduleResolution": "node",
     "esModuleInterop": true
   },
