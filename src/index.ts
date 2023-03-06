@@ -5,7 +5,7 @@ type CacheEntry = {
   expireTime: number;
 };
 
-export default class Neocache {
+export class Neocache {
   static instance = new Neocache();
 
   private cache = new Map<string, CacheEntry>();
@@ -56,3 +56,5 @@ export default class Neocache {
     delete this.cache[id];
   }
 }
+
+export default Neocache;

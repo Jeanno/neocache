@@ -8,7 +8,9 @@ Neocache is a minimal cache library.
 ### Basic
 
 ```
-const Neocache = require('neocache');
+import Neocache from 'neocache';
+// For CommonJS
+// const Neocache = require('neocache').default;
 
 const cache = Neocache.instance;
 
@@ -33,7 +35,9 @@ item = cache.get('itemId', async () => {
 
 ### Custom cache
 ```
-const Neocache = require('neocache');
+import Neocache from 'neocache';
+// For CommonJS
+// const Neocache = require('neocache').default;
 
 // You can create multiple instance of Neocache instead of using the default.
 const myCache = new Neocache();
