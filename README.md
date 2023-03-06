@@ -8,7 +8,9 @@ Neocache is a minimal cache library.
 ### Basic
 
 ```
-const { Memcache, defaultMemcache: cache } = require('neocache');
+const Neocache = require('neocache');
+
+const cache = Neocache.instance;
 
 let item = cache.get('itemId'); // returns null, since the cache starts out as empty
 
@@ -31,10 +33,10 @@ item = cache.get('itemId', async () => {
 
 ### Custom cache
 ```
-const { Memcache } = require('neocache');
+const Neocache = require('neocache');
 
-// You can create multiple instance of Memcache instead of using the default.
-const myCache = new Memcache();
+// You can create multiple instance of Neocache instead of using the default.
+const myCache = new Neocache();
 const item = myCache.get('itemId', async () => {
   // ...
   return value;
