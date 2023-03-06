@@ -5,9 +5,11 @@ type CacheEntry = {
   expireTime: number;
 };
 
-export class Memcache {
+export default class Neocache {
+  static instance = new Neocache();
+
   private cache = new Map<string, CacheEntry>();
-  async get(id: string, fetchFunc: () => any) {
+  async get(id: string, fetchFunc?: () => any) {
     if (!id) {
       return null;
     }
@@ -31,7 +33,7 @@ export class Memcache {
    */
   async getRandomItems(count: number) {
     const keys = Object.keys(this.cache);
-    const randomKeys = keys.sort(() => 0.5 - Math.random());
+    const randomKeys = keys.sort(() => Math.random());
     const ret = [];
     while (ret.length < count && randomKeys.length > 0) {
       const key = randomKeys.pop();
@@ -54,5 +56,3 @@ export class Memcache {
     delete this.cache[id];
   }
 }
-
-export const defaultMemcache = new Memcache();
