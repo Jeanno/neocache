@@ -9,7 +9,7 @@ test('get', async () => {
   expect(await cache.get('foo')).toBeNull();
   const data = await cache.get('foo', () => 'bar');
   expect(data).toBe('bar');
-})
+});
 
 test('singleton', () => {
   const cache1 = Neocache.instance;
@@ -18,4 +18,12 @@ test('singleton', () => {
   expect(cache1).toBeInstanceOf(Neocache);
   // Not null or undefined
   expect(cache1).toBeTruthy();
-})
+});
+
+test('expire time', async () => {
+  const cache = new Neocache();
+  const data = await cache.get('foo', () => 'bar', { expireTimeMs: 100 });
+  expect(data).toBe('bar');
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  expect(await cache.get('foo')).toBeNull();
+});

@@ -5,11 +5,16 @@ type CacheEntry = {
   expireTime: number;
 };
 
+type CacheOptions = {
+  expireTimeMs?: number;
+};
+
 export class Neocache {
   static instance = new Neocache();
 
   private cache = new Map<string, CacheEntry>();
-  async get(id: string, fetchFunc?: () => any) {
+
+  async get(id: string, fetchFunc?: () => any, options?: CacheOptions) {
     if (!id) {
       return null;
     }
@@ -23,7 +28,7 @@ export class Neocache {
     }
 
     const data = await fetchFunc();
-    this.set(id, data);
+    this.set(id, data, options);
     return data;
   }
 
@@ -45,10 +50,14 @@ export class Neocache {
     return ret;
   }
 
-  set(id: string, data: any) {
+  set(id: string, data: any, options?: CacheOptions) {
+    if (!id) {
+      return;
+    }
+
     this.cache[id] = {
       data,
-      expireAt: Date.now() + DEFAULT_EXPIRE_TIME_MS,
+      expireAt: Date.now() + (options?.expireTimeMs ?? DEFAULT_EXPIRE_TIME_MS),
     };
   }
 

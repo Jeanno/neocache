@@ -3,6 +3,11 @@
 ## Overview
 Neocache is a minimal cache library.
 
+## Features
+
+- Key-value based caching
+- Custom expire time
+
 ## Usage
 
 ### Basic
