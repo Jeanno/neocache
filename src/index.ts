@@ -113,7 +113,10 @@ export class Neocache {
     const timeKey = Math.floor(now / this.options.purgeIntervalMs);
     const keys = this.timeToKeyBucket.get(timeKey) ?? [];
     for (const key of keys) {
-      this.invalidate(key);
+      const item = this.cache[key];
+      if (item && item.expireAt < now) {
+        this.invalidate(key);
+      }
     }
     this.timeToKeyBucket.delete(timeKey);
   }
