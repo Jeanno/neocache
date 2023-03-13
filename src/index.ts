@@ -32,19 +32,6 @@ export class Neocache {
         ...options,
       };
     }
-
-    const weakThis = new WeakRef(this);
-    let timer = setInterval(() => {
-      const self = weakThis.deref();
-      if (self) {
-        self.purgeExpired();
-      } else {
-        clearInterval(timer);
-        timer = null;
-      }
-    }, this.options.purgeIntervalMs);
-
-    this.purgeExpiredTimer = timer;
   }
 
   async get(id: string, fetchFunc?: () => any, options?: CacheItemOptions) {
@@ -97,6 +84,8 @@ export class Neocache {
     const keys = this.timeToKeyBucket.get(timeKey) ?? [];
     keys.push(id);
     this.timeToKeyBucket.set(timeKey, keys);
+
+    this.setUpPurgeExpiredTimer();
   }
 
   invalidate(id: string) {
@@ -119,6 +108,24 @@ export class Neocache {
       }
     }
     this.timeToKeyBucket.delete(timeKey);
+  }
+
+  setUpPurgeExpiredTimer() {
+    if (this.purgeExpiredTimer) {
+      return;
+    }
+    const weakThis = new WeakRef(this);
+    let timer = setInterval(() => {
+      const self = weakThis.deref();
+      if (self) {
+        self.purgeExpired();
+      } else {
+        clearInterval(timer);
+        timer = null;
+      }
+    }, this.options.purgeIntervalMs);
+
+    this.purgeExpiredTimer = timer;
   }
 
   dispose() {
