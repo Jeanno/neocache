@@ -38,8 +38,8 @@ export class Neocache {
     if (!id) {
       return null;
     }
-    const cache = this.cache[id];
-    if (cache && cache.expireAt > Date.now()) {
+    const cache = this.cache.get(id);
+    if (cache && cache.expireTime > Date.now()) {
       return cache.data;
     }
 
@@ -57,13 +57,13 @@ export class Neocache {
    * They must not be expired.
    */
   async getRandomItems(count: number) {
-    const keys = Object.keys(this.cache);
+    const keys = Array.from(this.cache.keys());
     const randomKeys = keys.sort(() => Math.random());
     const ret = [];
     while (ret.length < count && randomKeys.length > 0) {
       const key = randomKeys.pop();
-      const cache = this.cache[key];
-      if (cache.expireAt > Date.now()) {
+      const cache = this.cache.get(key);
+      if (cache.expireTime > Date.now()) {
         ret.push(cache.data);
       }
     }
@@ -77,10 +77,10 @@ export class Neocache {
 
     const expireTimeMs =
       options?.expireTimeMs || this.options.defaultExpireTimeMs;
-    const expireAt = Date.now() + expireTimeMs;
-    this.cache[id] = { data, expireAt };
+    const expireTime = Date.now() + expireTimeMs;
+    this.cache.set(id, { data, expireTime });
 
-    const timeKey = Math.floor(expireAt / this.options.purgeIntervalMs) + 1;
+    const timeKey = Math.floor(expireTime / this.options.purgeIntervalMs) + 1;
     const keys = this.timeToKeyBucket.get(timeKey) ?? [];
     keys.push(id);
     this.timeToKeyBucket.set(timeKey, keys);
@@ -89,11 +89,15 @@ export class Neocache {
   }
 
   invalidate(id: string) {
-    delete this.cache[id];
+    this.cache.delete(id);
   }
 
-  get length(): number {
-    return Object.keys(this.cache).length;
+  get size(): number {
+    return this.cache.size;
+  }
+
+  get keys(): string[] {
+    return Array.from(this.cache.keys());
   }
 
   // Release expired items
@@ -102,8 +106,8 @@ export class Neocache {
     const timeKey = Math.floor(now / this.options.purgeIntervalMs);
     const keys = this.timeToKeyBucket.get(timeKey) ?? [];
     for (const key of keys) {
-      const item = this.cache[key];
-      if (item && item.expireAt < now) {
+      const item = this.cache.get(key);
+      if (item && item.expireTime < now) {
         this.invalidate(key);
       }
     }
