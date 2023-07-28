@@ -19,20 +19,24 @@ import Neocache from 'neocache';
 
 const cache = Neocache.instance;
 
-let item = cache.get('itemId'); // returns null, since the cache starts out as empty
+const cacheId = 'customCacheId';
 
-item = cache.get('itemId', async () => {
+let cachedItem = cache.get(cacheId); // returns null, since the cache starts out as empty
+
+cachedItem = cache.get(cacheId, async () => {
   // Put your data retrieval logic here.
-  const value = await getYourItemValue('itemId');
+  // This function is executed when cache doesn't exist or expired.
+  const value = await fetchDataFromDatabase('itemId');
   return value;
 });
 
 // Later...
 // Although the data retriving function is provided, it is not called because
 // the cached value is used.
-item = cache.get('itemId', async () => {
+cachedItem = cache.get(cachedId, async () => {
+
   // Code is not executed here
-  const value = await getYourItemValue('itemId');
+  const value = await fetchDataFromDatabase('itemId');
   return value;
 });
 
@@ -46,7 +50,9 @@ import Neocache from 'neocache';
 
 // You can create multiple instance of Neocache instead of using the default.
 const myCache = new Neocache();
-const item = myCache.get('itemId', async () => {
+
+const cacheId = 'customCacheId';
+const cachedItem = myCache.get(cacheId, async () => {
   // ...
   return value;
 });
