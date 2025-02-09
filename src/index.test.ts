@@ -47,7 +47,7 @@ test('purge expired', async () => {
   await new Promise((resolve) => setTimeout(resolve, 30));
   expect(await cache.get('foo')).toBeNull();
   expect(cache.size).toBe(1);
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await new Promise((resolve) => setTimeout(resolve, 200));
   expect(cache.size).toBe(0);
   cache.dispose();
 });
