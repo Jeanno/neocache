@@ -40,11 +40,11 @@ This will:
 
 ## To start contributing
 1. Read https://github.com/Jeanno/neocache/discussions/1 to learn about the road map
-2. Start a discussion before writting any code to get clarification and consent.
-  a. The discussion does not have to be long. It can be iterated multiple times to get to its final form.
-3. Create a pull request
-4. The pull request might also need a few iterations.
-5. Accepted
+2. Start a discussion before writting any code to get clarification and alignment on the direction.
+    - The discussion does not have to be long. It can be iterated multiple times to get to its final form.
+4. Create a pull request
+5. The pull request might also need a few iterations.
+6. Accepted
 
 
 ### Code Style
