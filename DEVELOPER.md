@@ -53,7 +53,7 @@ This will:
 - Use eslint and prettier. We already have those specs in the repo.
 - Follow existing code formatting
 
-### Release Process
+## Release Process
 
 This will be handled by @jeanno
 
