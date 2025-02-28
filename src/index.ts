@@ -10,6 +10,7 @@ type CacheItemOptions = {
 type CacheOptions = {
   defaultExpireTimeMs?: number;
   purgeIntervalMs?: number;
+  maxSize?: number;
 };
 
 export class Neocache {
@@ -18,8 +19,10 @@ export class Neocache {
   private options: CacheOptions = {
     defaultExpireTimeMs: 3600000,
     purgeIntervalMs: 60000,
+    maxSize: Infinity,
   };
 
+  // Main cache storage - using Map which preserves insertion order for LRU
   private cache = new Map<string, CacheItem>();
 
   private timeToKeyBucket = new Map<number, string[]>();
@@ -38,9 +41,15 @@ export class Neocache {
     if (!id) {
       return null;
     }
-    const cache = this.cache.get(id);
-    if (cache && cache.expireTime > Date.now()) {
-      return cache.data;
+
+    const cacheItem = this.cache.get(id);
+
+    if (cacheItem && cacheItem.expireTime > Date.now()) {
+      // Update LRU order by re-inserting the item (delete and add)
+      // This makes it the most recently used item in the Map
+      this.cache.delete(id);
+      this.cache.set(id, cacheItem);
+      return cacheItem.data;
     }
 
     if (!fetchFunc) {
@@ -58,12 +67,12 @@ export class Neocache {
    */
   async getRandomItems(count: number) {
     const keys = Array.from(this.cache.keys());
-    const randomKeys = keys.sort(() => Math.random());
+    const randomKeys = keys.sort(() => Math.random() - 0.5);
     const ret = [];
     while (ret.length < count && randomKeys.length > 0) {
       const key = randomKeys.pop();
       const cache = this.cache.get(key);
-      if (cache.expireTime > Date.now()) {
+      if (cache && cache.expireTime > Date.now()) {
         ret.push(cache.data);
       }
     }
@@ -75,9 +84,19 @@ export class Neocache {
       return;
     }
 
+    // If this is an existing key, we need to remove it first to update the LRU order
+    if (this.cache.has(id)) {
+      this.cache.delete(id);
+    } else if (this.options.maxSize) {
+      if (this.cache.size >= this.options.maxSize) {
+        this.evictLRU();
+      }
+    }
+
     const expireTimeMs =
       options?.expireTimeMs || this.options.defaultExpireTimeMs;
     const expireTime = Date.now() + expireTimeMs;
+
     this.cache.set(id, { data, expireTime });
 
     const timeKey = Math.floor(expireTime / this.options.purgeIntervalMs) + 1;
@@ -86,6 +105,19 @@ export class Neocache {
     this.timeToKeyBucket.set(timeKey, keys);
 
     this.setUpPurgeExpiredTimer();
+  }
+
+  /**
+   * Evicts the least recently used item from the cache
+   * Uses the fact that Map maintains insertion order, so the first key is the oldest
+   */
+  private evictLRU() {
+    if (this.cache.size > 0) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey) {
+        this.invalidate(firstKey);
+      }
+    }
   }
 
   invalidate(id: string) {

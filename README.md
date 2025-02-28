@@ -1,14 +1,18 @@
 # Neocache
 
 ## Overview
-Neocache is a minimal cache library.
+Neocache is a minimal cache library
 
 https://www.npmjs.com/package/neocache
 
 ## Features
 
 - Key-value based caching
-- Custom expire time
+- Multiple eviction strategy
+  - Custom expire time
+  - LRU (Least Recently Used)
+- Configurable max size
+- Built-in benchmarking
 
 ## Usage
 
@@ -58,7 +62,44 @@ const cachedItem = myCache.get(cacheId, async () => {
   // ...
   return value;
 });
+```
 
 ```
+import Neocache from 'neocache';
+
+// You can also use custom configuration for expiration time and max size
+const myCache = new Neocache({
+  // Default time until items expire (in milliseconds)
+  defaultExpireTimeMs: 3600000, // 1 hour
+  
+  // How often to check for and remove expired items (in milliseconds)
+  purgeIntervalMs: 60000, // 1 minute
+  
+  // Maximum number of items to store in cache before LRU eviction
+  maxSize: 1000
+});
+```
+
+### LRU Eviction
+
+The cache uses a Least Recently Used (LRU) eviction strategy. When the cache reaches its maximum size, the least recently used items will be evicted to make room for new items.
+
+To enable LRU eviction, specify the `maxSize` option when creating a cache instance:
+
+```javascript
+const cache = new Neocache({
+  maxSize: 1000 // Maximum 1000 items in cache
+});
+```
+
+### Benchmarking
+
+Neocache comes with built-in benchmarking capabilities. To run benchmarks:
+
+```bash
+npm run benchmark
+```
+
+This will output performance metrics for various operations, such as setting items, getting items, LRU eviction, and mixed operations.
 
 
