@@ -19,7 +19,6 @@ export class Neocache {
   private options: CacheOptions = {
     defaultExpireTimeMs: 3600000,
     purgeIntervalMs: 60000,
-    maxSize: Infinity,
   };
 
   // Main cache storage - using Map which preserves insertion order for LRU
