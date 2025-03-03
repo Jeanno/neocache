@@ -273,12 +273,12 @@ async function runComparativeBenchmarks() {
   console.log('SET OPERATIONS');
   console.log('─────────────────────────────────────────────────────────');
   console.log(
-    'Library      | 1,000 items    | 10,000 items   | 100,000 items  ',
+    'Library      | 1,000 items    | 100,000 items   | 1,000,000 items  ',
   );
   console.log('─────────────────────────────────────────────────────────');
 
   // Set operation benchmarks
-  const setOperations = [1000, 10000, 100000];
+  const setOperations = [1000, 100000, 1000000];
   for (const impl of cacheImplementations) {
     const results = [];
 
@@ -302,11 +302,11 @@ async function runComparativeBenchmarks() {
   console.log('GET OPERATIONS');
   console.log('─────────────────────────────────────────────────────────');
   console.log(
-    'Library      | 1,000 items    | 10,000 items   | 1,000,000 items  ',
+    'Library      | 1,000 items    | 100,000 items   | 1,000,000 items  ',
   );
   console.log('─────────────────────────────────────────────────────────');
 
-  const getOperations = [1000, 10000, 1000000];
+  const getOperations = [1000, 100000, 1000000];
   for (const impl of cacheImplementations) {
     const results = [];
 
@@ -366,9 +366,9 @@ async function runOriginalBenchmarks() {
   console.log('Running Neocache Benchmarks...\n');
 
   // Basic set operations
-  const setOperations = [1000, 10000, 1000000];
+  const setOperations = [1000, 10000, 10000000];
   for (const count of setOperations) {
-    const benchmark = new CacheBenchmark(new NeocacheImpl({ maxSize: 10000 }));
+    const benchmark = new CacheBenchmark(new NeocacheImpl({ maxSize: 1000 }));
     const time = await benchmark.benchmarkSet(count);
     console.log(
       `Setting ${count} items: ${time.toFixed(2)}ms (${(
