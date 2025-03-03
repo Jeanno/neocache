@@ -366,9 +366,9 @@ async function runOriginalBenchmarks() {
   console.log('Running Neocache Benchmarks...\n');
 
   // Basic set operations
-  const setOperations = [1000, 10000, 100000];
+  const setOperations = [1000, 10000, 1000000];
   for (const count of setOperations) {
-    const benchmark = new CacheBenchmark(new NeocacheImpl());
+    const benchmark = new CacheBenchmark(new NeocacheImpl({ maxSize: 10000 }));
     const time = await benchmark.benchmarkSet(count);
     console.log(
       `Setting ${count} items: ${time.toFixed(2)}ms (${(
