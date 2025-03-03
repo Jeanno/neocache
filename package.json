@@ -10,7 +10,9 @@
     "test": "npx jest",
     "build": "npx tsc",
     "prepare": "npm run build",
-    "benchmark": "npx tsx src/benchmark.ts"
+    "benchmark": "npx tsx src/benchmark.ts",
+    "benchmark:original": "npx tsx src/benchmark.ts --original",
+    "benchmark:compare": "npx tsx src/benchmark.ts"
   },
   "keywords": [
     "cache"
@@ -26,8 +28,12 @@
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.2.1",
     "jest": "^29.4.3",
+    "lru-cache": "^11.0.2",
+    "node-cache": "^5.1.2",
+    "quick-lru": "^7.0.0",
     "ts-jest": "^29.0.5",
     "ts-node": "^10.9.1",
+    "tsx": "^4.19.3",
     "typescript": "^4.7.4"
   }
 }

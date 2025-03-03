@@ -1,10 +1,24 @@
 import Neocache from './index';
 import { performance } from 'perf_hooks';
+import NodeCache from 'node-cache';
+import { LRUCache } from 'lru-cache';
+import QuickLRU from 'quick-lru';
 
 /**
- * A simple benchmarking utility for Neocache
+ * Interface for all cache implementations to ensure consistent benchmarking
  */
-class CacheBenchmark {
+interface CacheImplementation {
+  name: string;
+  set(key: string, value: any): void;
+  get(key: string): Promise<any> | any;
+  dispose?(): void;
+}
+
+/**
+ * Neocache implementation
+ */
+class NeocacheImpl implements CacheImplementation {
+  name = 'Neocache';
   private cache: Neocache;
 
   constructor(options?: {
@@ -15,16 +29,114 @@ class CacheBenchmark {
     this.cache = new Neocache(options);
   }
 
+  set(key: string, value: any): void {
+    this.cache.set(key, value);
+  }
+
+  async get(key: string): Promise<any> {
+    return this.cache.get(key);
+  }
+
+  dispose(): void {
+    this.cache.dispose();
+  }
+}
+
+/**
+ * node-cache implementation
+ */
+class NodeCacheImpl implements CacheImplementation {
+  name = 'node-cache';
+  private cache: NodeCache;
+
+  constructor(options?: { maxSize?: number; defaultExpireTimeMs?: number }) {
+    this.cache = new NodeCache({
+      stdTTL: options?.defaultExpireTimeMs
+        ? options.defaultExpireTimeMs / 1000
+        : 3600,
+      maxKeys: -1, // Hardcode to unlimited keys because it does not support LRU
+      checkperiod: 0, // disable automatic deletion during benchmarks
+    });
+  }
+
+  set(key: string, value: any): void {
+    this.cache.set(key, value);
+  }
+
+  get(key: string): any {
+    return this.cache.get(key);
+  }
+
+  dispose(): void {
+    this.cache.close();
+  }
+}
+
+/**
+ * lru-cache implementation
+ */
+class LRUCacheImpl implements CacheImplementation {
+  name = 'lru-cache';
+  private cache: LRUCache<string, any>;
+
+  constructor(options?: { maxSize?: number; defaultExpireTimeMs?: number }) {
+    this.cache = new LRUCache({
+      max: options?.maxSize,
+      ttl: options?.defaultExpireTimeMs,
+    });
+  }
+
+  set(key: string, value: any): void {
+    this.cache.set(key, value);
+  }
+
+  get(key: string): any {
+    return this.cache.get(key);
+  }
+}
+
+/**
+ * quick-lru implementation
+ */
+class QuickLRUImpl implements CacheImplementation {
+  name = 'quick-lru';
+  private cache: QuickLRU<string, any>;
+
+  constructor(options?: { maxSize?: number }) {
+    this.cache = new QuickLRU({
+      maxSize: options?.maxSize || 1000,
+    });
+  }
+
+  set(key: string, value: any): void {
+    this.cache.set(key, value);
+  }
+
+  get(key: string): any {
+    return this.cache.get(key);
+  }
+}
+
+/**
+ * Benchmarking class that works with any cache implementation
+ */
+class CacheBenchmark {
+  private cache: CacheImplementation;
+
+  constructor(cacheImpl: CacheImplementation) {
+    this.cache = cacheImpl;
+  }
+
   /**
    * Measures the time to set items in the cache
    */
   async benchmarkSet(count: number): Promise<number> {
     const start = performance.now();
-    
+
     for (let i = 0; i < count; i++) {
       this.cache.set(`key-${i}`, `value-${i}`);
     }
-    
+
     const end = performance.now();
     return end - start;
   }
@@ -33,17 +145,29 @@ class CacheBenchmark {
    * Measures the time to get items from the cache
    */
   async benchmarkGet(count: number): Promise<number> {
+    const populateCount = Math.min(count, 10000);
+
     // First populate the cache
-    for (let i = 0; i < count; i++) {
-      this.cache.set(`key-${i}`, `value-${i}`);
+    try {
+      for (let i = 0; i < populateCount; i++) {
+        this.cache.set(`key-${i}`, `value-${i}`);
+      }
+    } catch (error) {
+      console.error(`Error populating cache: ${error.message}`);
     }
-    
+
+    // Randomize the access pattern
+    const keys = Array.from({ length: count }, (_, i) => i);
+    keys.sort(() => Math.random() - 0.5);
+
     const start = performance.now();
-    
-    for (let i = 0; i < count; i++) {
-      await this.cache.get(`key-${i}`);
+
+    // Read within the range we populated
+    for (const i of keys) {
+      const keyIndex = i % populateCount;
+      await this.cache.get(`key-${keyIndex}`);
     }
-    
+
     const end = performance.now();
     return end - start;
   }
@@ -51,99 +175,261 @@ class CacheBenchmark {
   /**
    * Measures the time for LRU eviction with a full cache
    */
-  async benchmarkLRUEviction(cacheSize: number, operationCount: number): Promise<number> {
-    // Create a cache with limited size
-    const lruCache = new Neocache({ maxSize: cacheSize });
-    
-    // Fill the cache to capacity
-    for (let i = 0; i < cacheSize; i++) {
-      lruCache.set(`key-${i}`, `value-${i}`);
+  async benchmarkLRUEviction(
+    cacheSize: number,
+    operationCount: number,
+  ): Promise<number> {
+    try {
+      // Fill the cache to capacity
+      for (let i = 0; i < cacheSize; i++) {
+        this.cache.set(`key-${i}`, `value-${i}`);
+      }
+
+      const start = performance.now();
+
+      // Add more items to trigger LRU eviction
+      for (let i = 0; i < operationCount; i++) {
+        this.cache.set(`new-key-${i}`, `new-value-${i}`);
+      }
+
+      const end = performance.now();
+
+      return end - start;
+    } catch (error) {
+      console.error(`Error in LRU eviction benchmark: ${error.message}`);
+      return 0; // Return 0 if the test failed
     }
-    
-    const start = performance.now();
-    
-    // Add more items to trigger LRU eviction
-    for (let i = 0; i < operationCount; i++) {
-      lruCache.set(`new-key-${i}`, `new-value-${i}`);
-    }
-    
-    const end = performance.now();
-    lruCache.dispose();
-    return end - start;
   }
 
   /**
    * Measures the time for mixed operations (get/set) with random access patterns
    */
   async benchmarkMixedOperations(operationCount: number): Promise<number> {
-    const start = performance.now();
-    
-    for (let i = 0; i < operationCount; i++) {
-      const operation = Math.random() > 0.5 ? 'get' : 'set';
-      const keyIndex = Math.floor(Math.random() * operationCount);
-      
-      if (operation === 'get') {
-        await this.cache.get(`key-${keyIndex}`);
-      } else {
-        this.cache.set(`key-${keyIndex}`, `value-${i}`);
+    const keySpace = operationCount;
+
+    try {
+      // Prepopulate some keys
+      for (let i = 0; i < keySpace; i++) {
+        this.cache.set(`key-${i}`, `value-${i}`);
       }
+
+      const start = performance.now();
+
+      for (let i = 0; i < operationCount; i++) {
+        const operation = Math.random() > 0.5 ? 'get' : 'set';
+        const keyIndex = Math.floor(Math.random() * keySpace);
+
+        if (operation === 'get') {
+          await this.cache.get(`key-${keyIndex}`);
+        } else {
+          this.cache.set(`key-${keyIndex}`, `value-${i}`);
+        }
+      }
+
+      const end = performance.now();
+
+      return end - start;
+    } catch (error) {
+      console.error(`Error in mixed operations benchmark: ${error.message}`);
+      return 0; // Return 0 if the test failed
     }
-    
-    const end = performance.now();
-    return end - start;
   }
 
   dispose() {
-    this.cache.dispose();
+    if (this.cache.dispose) {
+      this.cache.dispose();
+    }
   }
 }
 
 /**
- * Run benchmarks and print results
+ * Run benchmarks across all cache implementations
  */
-async function runBenchmarks() {
+async function runComparativeBenchmarks() {
+  console.log('Comparative Cache Benchmarks\n');
+  console.log('==========================\n');
+
+  const cacheOptions = {
+    maxSize: 10000,
+    defaultExpireTimeMs: 3600000,
+    purgeIntervalMs: 60000, // Only for Neocache
+  };
+
+  const cacheImplementations: CacheImplementation[] = [
+    new NodeCacheImpl(cacheOptions),
+    new LRUCacheImpl(cacheOptions),
+    new QuickLRUImpl({ maxSize: cacheOptions.maxSize }),
+    new NeocacheImpl(cacheOptions),
+  ];
+
+  // Format utility
+  const formatOpsPerSec = (count: number, timeMs: number) => {
+    if (timeMs <= 0) return 'N/A';
+    const opsPerSec = count / (timeMs / 1000);
+    return `${opsPerSec.toFixed(0)} ops/sec`;
+  };
+
+  // Table header
+  console.log('SET OPERATIONS');
+  console.log('─────────────────────────────────────────────────────────');
+  console.log(
+    'Library      | 1,000 items    | 10,000 items   | 100,000 items  ',
+  );
+  console.log('─────────────────────────────────────────────────────────');
+
+  // Set operation benchmarks
+  const setOperations = [1000, 10000, 100000];
+  for (const impl of cacheImplementations) {
+    const results = [];
+
+    for (const count of setOperations) {
+      const benchmark = new CacheBenchmark(impl);
+      const time = await benchmark.benchmarkSet(count);
+      results.push(`${formatOpsPerSec(count, time)}`);
+      benchmark.dispose();
+    }
+
+    console.log(
+      `${impl.name.padEnd(12)} | ${results[0].padEnd(15)} | ${results[1].padEnd(
+        15,
+      )} | ${results[2]}`,
+    );
+  }
+
+  console.log('\n');
+
+  // GET OPERATIONS
+  console.log('GET OPERATIONS');
+  console.log('─────────────────────────────────────────────────────────');
+  console.log(
+    'Library      | 1,000 items    | 10,000 items   | 1,000,000 items  ',
+  );
+  console.log('─────────────────────────────────────────────────────────');
+
+  const getOperations = [1000, 10000, 1000000];
+  for (const impl of cacheImplementations) {
+    const results = [];
+
+    for (const count of getOperations) {
+      const benchmark = new CacheBenchmark(impl);
+      const time = await benchmark.benchmarkGet(count);
+      results.push(`${formatOpsPerSec(count, time)}`);
+      benchmark.dispose();
+    }
+
+    console.log(
+      `${impl.name.padEnd(12)} | ${results[0].padEnd(15)} | ${results[1].padEnd(
+        15,
+      )} | ${results[2]}`,
+    );
+  }
+
+  console.log('\n');
+
+  // LRU EVICTION
+  console.log('LRU EVICTION (adding 50,000 items to a cache of 5,000 items)');
+  console.log('─────────────────────────────────────────────────────────');
+  console.log('Library      | Performance    ');
+  console.log('─────────────────────────────');
+
+  for (const impl of cacheImplementations) {
+    const ops = 50000;
+    const benchmark = new CacheBenchmark(impl);
+    const time = await benchmark.benchmarkLRUEviction(5000, ops);
+    console.log(`${impl.name.padEnd(12)} | ${formatOpsPerSec(ops, time)}`);
+    benchmark.dispose();
+  }
+
+  console.log('\n');
+
+  // MIXED OPERATIONS
+  console.log('MIXED OPERATIONS (20,000 random get/set operations)');
+  console.log('─────────────────────────────────────────────────────────');
+  console.log('Library      | Performance    ');
+  console.log('─────────────────────────────');
+
+  for (const impl of cacheImplementations) {
+    const benchmark = new CacheBenchmark(impl);
+    const time = await benchmark.benchmarkMixedOperations(20000);
+    console.log(`${impl.name.padEnd(12)} | ${formatOpsPerSec(20000, time)}`);
+    benchmark.dispose();
+  }
+
+  console.log('\n');
+  console.log('Benchmark complete!');
+}
+
+/**
+ * Run the original Neocache benchmark for backward compatibility
+ */
+async function runOriginalBenchmarks() {
   console.log('Running Neocache Benchmarks...\n');
-  
+
   // Basic set operations
   const setOperations = [1000, 10000, 100000];
   for (const count of setOperations) {
-    const benchmark = new CacheBenchmark();
+    const benchmark = new CacheBenchmark(new NeocacheImpl());
     const time = await benchmark.benchmarkSet(count);
-    console.log(`Setting ${count} items: ${time.toFixed(2)}ms (${(count / (time / 1000)).toFixed(0)} ops/sec)`);
+    console.log(
+      `Setting ${count} items: ${time.toFixed(2)}ms (${(
+        count /
+        (time / 1000)
+      ).toFixed(0)} ops/sec)`,
+    );
     benchmark.dispose();
   }
-  
+
   console.log('');
-  
+
   // Basic get operations
   const getOperations = [1000, 10000, 100000];
   for (const count of getOperations) {
-    const benchmark = new CacheBenchmark();
+    const benchmark = new CacheBenchmark(new NeocacheImpl());
     const time = await benchmark.benchmarkGet(count);
-    console.log(`Getting ${count} items: ${time.toFixed(2)}ms (${(count / (time / 1000)).toFixed(0)} ops/sec)`);
+    console.log(
+      `Getting ${count} items: ${time.toFixed(2)}ms (${(
+        count /
+        (time / 1000)
+      ).toFixed(0)} ops/sec)`,
+    );
     benchmark.dispose();
   }
-  
+
   console.log('');
-  
+
   // LRU eviction benchmark
-  const lruBenchmark = new CacheBenchmark();
+  const lruBenchmark = new CacheBenchmark(new NeocacheImpl());
   const lruEvictionTime = await lruBenchmark.benchmarkLRUEviction(10000, 5000);
-  console.log(`LRU eviction with 10000 items cache adding 5000 items: ${lruEvictionTime.toFixed(2)}ms (${(5000 / (lruEvictionTime / 1000)).toFixed(0)} ops/sec)`);
+  console.log(
+    `LRU eviction with 10000 items cache adding 5000 items: ${lruEvictionTime.toFixed(
+      2,
+    )}ms (${(5000 / (lruEvictionTime / 1000)).toFixed(0)} ops/sec)`,
+  );
   lruBenchmark.dispose();
-  
+
   console.log('');
-  
+
   // Mixed operations
-  const mixedBenchmark = new CacheBenchmark({ maxSize: 50000 });
+  const mixedBenchmark = new CacheBenchmark(
+    new NeocacheImpl({ maxSize: 50000 }),
+  );
   const mixedTime = await mixedBenchmark.benchmarkMixedOperations(50000);
-  console.log(`Mixed 50000 operations (random get/set): ${mixedTime.toFixed(2)}ms (${(50000 / (mixedTime / 1000)).toFixed(0)} ops/sec)`);
+  console.log(
+    `Mixed 50000 operations (random get/set): ${mixedTime.toFixed(2)}ms (${(
+      50000 /
+      (mixedTime / 1000)
+    ).toFixed(0)} ops/sec)`,
+  );
   mixedBenchmark.dispose();
 }
 
 // Run the benchmarks when this file is executed directly
 if (require.main === module) {
-  runBenchmarks().catch(console.error);
+  if (process.argv.includes('--original')) {
+    runOriginalBenchmarks().catch(console.error);
+  } else {
+    runComparativeBenchmarks().catch(console.error);
+  }
 }
 
-export { CacheBenchmark };
+export { CacheBenchmark, NeocacheImpl as Neocache };

@@ -97,9 +97,26 @@ const cache = new Neocache({
 Neocache comes with built-in benchmarking capabilities. To run benchmarks:
 
 ```bash
+# Run comparative benchmarks against other popular cache libraries
 npm run benchmark
+
+# Run the original Neocache-only benchmarks
+npm run benchmark:original
 ```
 
-This will output performance metrics for various operations, such as setting items, getting items, LRU eviction, and mixed operations.
+The comparative benchmark compares Neocache against other popular TypeScript/JavaScript cache libraries:
+
+- [node-cache](https://www.npmjs.com/package/node-cache)
+- [lru-cache](https://www.npmjs.com/package/lru-cache)
+- [quick-lru](https://www.npmjs.com/package/quick-lru)
+
+This will output performance metrics for various operations:
+
+1. **SET operations**: Measures performance of setting items in the cache
+2. **GET operations**: Measures performance of retrieving items from the cache
+3. **LRU eviction**: Measures performance when adding items to a full cache, triggering LRU eviction
+4. **Mixed operations**: Measures performance with a random mix of get and set operations
+
+*Note: Actual performance will vary based on your system. Run the benchmarks on your own machine for accurate results.*
 
 
