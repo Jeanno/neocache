@@ -252,7 +252,6 @@ async function runComparativeBenchmarks() {
   const cacheOptions = {
     maxSize: 10000,
     defaultExpireTimeMs: 3600000,
-    purgeIntervalMs: 60000, // Only for Neocache
   };
 
   const cacheImplementations: CacheImplementation[] = [
@@ -326,22 +325,6 @@ async function runComparativeBenchmarks() {
 
   console.log('\n');
 
-  // LRU EVICTION
-  console.log('LRU EVICTION (adding 50,000 items to a cache of 5,000 items)');
-  console.log('─────────────────────────────────────────────────────────');
-  console.log('Library      | Performance    ');
-  console.log('─────────────────────────────');
-
-  for (const impl of cacheImplementations) {
-    const ops = 50000;
-    const benchmark = new CacheBenchmark(impl);
-    const time = await benchmark.benchmarkLRUEviction(5000, ops);
-    console.log(`${impl.name.padEnd(12)} | ${formatOpsPerSec(ops, time)}`);
-    benchmark.dispose();
-  }
-
-  console.log('\n');
-
   // MIXED OPERATIONS
   console.log('MIXED OPERATIONS (20,000 random get/set operations)');
   console.log('─────────────────────────────────────────────────────────');
@@ -356,6 +339,28 @@ async function runComparativeBenchmarks() {
   }
 
   console.log('\n');
+
+  // LRU EVICTION
+  // Remove node cache from the list because it does not support LRU eviction
+
+  const lruCacheImplementations = cacheImplementations.filter(
+    (impl) => impl.name !== 'node-cache',
+  );
+  console.log('LRU EVICTION (adding 50,000 items to a cache of 10,000 items)');
+  console.log('─────────────────────────────────────────────────────────');
+  console.log('Library      | Performance    ');
+  console.log('─────────────────────────────');
+
+  for (const impl of lruCacheImplementations) {
+    const ops = 50000;
+    const benchmark = new CacheBenchmark(impl);
+    const time = await benchmark.benchmarkLRUEviction(10000, ops);
+    console.log(`${impl.name.padEnd(12)} | ${formatOpsPerSec(ops, time)}`);
+    benchmark.dispose();
+  }
+
+  console.log('\n');
+
   console.log('Benchmark complete!');
 }
 

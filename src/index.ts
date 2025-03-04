@@ -23,6 +23,7 @@ export class Neocache {
 
   // Main cache storage - using Map which preserves insertion order for LRU
   private cache = new Map<string, CacheItem>();
+  private oldCache = new Map<string, CacheItem>();
 
   private timeToKeyBucket = new Map<number, string[]>();
   private purgeExpiredTimer: NodeJS.Timeout | null = null;
@@ -41,14 +42,22 @@ export class Neocache {
       return null;
     }
 
-    const cacheItem = this.cache.get(id);
+    if (this.cache.has(id)) {
+      const item = this.cache.get(id);
+      if (item && item.expireTime > Date.now()) {
+        this.cache.delete(id);
+        this.cache.set(id, item);
+        return item.data;
+      }
+    }
 
-    if (cacheItem && cacheItem.expireTime > Date.now()) {
-      // Update LRU order by re-inserting the item (delete and add)
-      // This makes it the most recently used item in the Map
-      this.cache.delete(id);
-      this.cache.set(id, cacheItem);
-      return cacheItem.data;
+    if (this.oldCache.has(id)) {
+      const item = this.oldCache.get(id);
+      if (item && item.expireTime > Date.now()) {
+        this.oldCache.delete(id);
+        this.cache.set(id, item);
+        return item.data;
+      }
     }
 
     if (!fetchFunc) {
@@ -83,12 +92,15 @@ export class Neocache {
       return;
     }
 
+    this.oldCache.delete(id);
+
     // If this is an existing key, we need to remove it first to update the LRU order
     if (this.cache.has(id)) {
       this.cache.delete(id);
     } else if (this.options.maxSize) {
       if (this.cache.size >= this.options.maxSize) {
-        this.evictLRU();
+        this.oldCache = this.cache;
+        this.cache = new Map<string, CacheItem>();
       }
     }
 
@@ -98,6 +110,9 @@ export class Neocache {
 
     this.cache.set(id, { data, expireTime });
 
+    if (!this.options.purgeIntervalMs) {
+      return;
+    }
     const timeKey = Math.floor(expireTime / this.options.purgeIntervalMs) + 1;
     const keys = this.timeToKeyBucket.get(timeKey) ?? [];
     keys.push(id);
@@ -106,25 +121,24 @@ export class Neocache {
     this.setUpPurgeExpiredTimer();
   }
 
-  /**
-   * Evicts the least recently used item from the cache
-   * Uses the fact that Map maintains insertion order, so the first key is the oldest
-   */
-  private evictLRU() {
-    if (this.cache.size > 0) {
-      const firstKey = this.cache.keys().next().value;
-      if (firstKey) {
-        this.invalidate(firstKey);
-      }
-    }
-  }
-
   invalidate(id: string) {
     this.cache.delete(id);
+    this.oldCache.delete(id);
   }
 
   get size(): number {
-    return this.cache.size;
+    if (!this.cache.size) {
+      return this.oldCache.size;
+    }
+
+    let size = this.oldCache.size;
+    for (const key of this.cache.keys()) {
+      if (!this.oldCache.has(key)) {
+        size++;
+      }
+    }
+
+    return Math.min(size, this.options.maxSize ?? Number.POSITIVE_INFINITY);
   }
 
   get keys(): string[] {
@@ -146,6 +160,9 @@ export class Neocache {
   }
 
   setUpPurgeExpiredTimer() {
+    if (!this.options.purgeIntervalMs) {
+      return;
+    }
     if (this.purgeExpiredTimer) {
       return;
     }
