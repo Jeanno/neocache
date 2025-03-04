@@ -12,6 +12,7 @@ interface CacheImplementation {
   set(key: string, value: any): void;
   get(key: string): Promise<any> | any;
   dispose?(): void;
+  reset(): void; // New method for resetting cache state
 }
 
 /**
@@ -20,12 +21,18 @@ interface CacheImplementation {
 class NeocacheImpl implements CacheImplementation {
   name = 'Neocache';
   private cache: Neocache;
+  private options?: {
+    maxSize?: number;
+    defaultExpireTimeMs?: number;
+    purgeIntervalMs?: number;
+  };
 
   constructor(options?: {
     maxSize?: number;
     defaultExpireTimeMs?: number;
     purgeIntervalMs?: number;
   }) {
+    this.options = options;
     this.cache = new Neocache(options);
   }
 
@@ -40,6 +47,11 @@ class NeocacheImpl implements CacheImplementation {
   dispose(): void {
     this.cache.dispose();
   }
+
+  reset(): void {
+    this.dispose();
+    this.cache = new Neocache(this.options);
+  }
 }
 
 /**
@@ -48,13 +60,15 @@ class NeocacheImpl implements CacheImplementation {
 class NodeCacheImpl implements CacheImplementation {
   name = 'node-cache';
   private cache: NodeCache;
+  private options?: { maxSize?: number; defaultExpireTimeMs?: number };
 
   constructor(options?: { maxSize?: number; defaultExpireTimeMs?: number }) {
+    this.options = options;
     this.cache = new NodeCache({
       stdTTL: options?.defaultExpireTimeMs
         ? options.defaultExpireTimeMs / 1000
         : 3600,
-      maxKeys: -1, // Hardcode to unlimited keys because it does not support LRU
+      maxKeys: 1000000,
       checkperiod: 0, // disable automatic deletion during benchmarks
     });
   }
@@ -70,6 +84,10 @@ class NodeCacheImpl implements CacheImplementation {
   dispose(): void {
     this.cache.close();
   }
+
+  reset(): void {
+    this.cache.flushAll();
+  }
 }
 
 /**
@@ -78,8 +96,10 @@ class NodeCacheImpl implements CacheImplementation {
 class LRUCacheImpl implements CacheImplementation {
   name = 'lru-cache';
   private cache: LRUCache<string, any>;
+  private options?: { maxSize?: number; defaultExpireTimeMs?: number };
 
   constructor(options?: { maxSize?: number; defaultExpireTimeMs?: number }) {
+    this.options = options;
     this.cache = new LRUCache({
       max: options?.maxSize,
       ttl: options?.defaultExpireTimeMs,
@@ -93,6 +113,13 @@ class LRUCacheImpl implements CacheImplementation {
   get(key: string): any {
     return this.cache.get(key);
   }
+
+  reset(): void {
+    this.cache = new LRUCache({
+      max: this.options?.maxSize,
+      ttl: this.options?.defaultExpireTimeMs,
+    });
+  }
 }
 
 /**
@@ -101,10 +128,13 @@ class LRUCacheImpl implements CacheImplementation {
 class QuickLRUImpl implements CacheImplementation {
   name = 'quick-lru';
   private cache: QuickLRU<string, any>;
+  private options?: { maxSize?: number; defaultExpireTimeMs?: number };
 
-  constructor(options?: { maxSize?: number }) {
+  constructor(options?: { maxSize?: number; defaultExpireTimeMs?: number }) {
+    this.options = options;
     this.cache = new QuickLRU({
       maxSize: options?.maxSize || 1000,
+      maxAge: options?.defaultExpireTimeMs ?? 3600000,
     });
   }
 
@@ -114,6 +144,14 @@ class QuickLRUImpl implements CacheImplementation {
 
   get(key: string): any {
     return this.cache.get(key);
+  }
+
+  reset(): void {
+    this.cache.clear();
+    this.cache = new QuickLRU({
+      maxSize: this.options?.maxSize || 1000,
+      maxAge: this.options?.defaultExpireTimeMs ?? 3600000,
+    });
   }
 }
 
@@ -125,6 +163,13 @@ class CacheBenchmark {
 
   constructor(cacheImpl: CacheImplementation) {
     this.cache = cacheImpl;
+  }
+
+  /**
+   * Resets the cache to a clean state
+   */
+  resetCache(): void {
+    this.cache.reset();
   }
 
   /**
@@ -216,7 +261,7 @@ class CacheBenchmark {
       const start = performance.now();
 
       for (let i = 0; i < operationCount; i++) {
-        const operation = Math.random() > 0.5 ? 'get' : 'set';
+        const operation = Math.random() > 0.8 ? 'get' : 'set';
         const keyIndex = Math.floor(Math.random() * keySpace);
 
         if (operation === 'get') {
@@ -252,10 +297,10 @@ async function runComparativeBenchmarks() {
   const cacheOptions = {
     maxSize: 10000,
     defaultExpireTimeMs: 3600000,
+    purgeIntervalMs: null,
   };
 
   const cacheImplementations: CacheImplementation[] = [
-    // new NodeCacheImpl(cacheOptions),
     new LRUCacheImpl(cacheOptions),
     new QuickLRUImpl({ maxSize: cacheOptions.maxSize }),
     new NeocacheImpl(cacheOptions),
@@ -285,6 +330,7 @@ async function runComparativeBenchmarks() {
 
     for (const count of setOperations) {
       const benchmark = new CacheBenchmark(impl);
+      benchmark.resetCache(); // Reset cache before benchmark
       const time = await benchmark.benchmarkSet(count);
       results.push(`${formatOpsPerSec(count, time)}`);
       benchmark.dispose();
@@ -313,6 +359,7 @@ async function runComparativeBenchmarks() {
 
     for (const count of getOperations) {
       const benchmark = new CacheBenchmark(impl);
+      benchmark.resetCache(); // Reset cache before benchmark
       const time = await benchmark.benchmarkGet(count);
       results.push(`${formatOpsPerSec(count, time)}`);
       benchmark.dispose();
@@ -335,6 +382,7 @@ async function runComparativeBenchmarks() {
 
   for (const impl of cacheImplementations) {
     const benchmark = new CacheBenchmark(impl);
+    benchmark.resetCache(); // Reset cache before benchmark
     const time = await benchmark.benchmarkMixedOperations(500000);
     console.log(`${impl.name.padEnd(12)} | ${formatOpsPerSec(500000, time)}`);
     benchmark.dispose();
@@ -356,6 +404,7 @@ async function runComparativeBenchmarks() {
   for (const impl of lruCacheImplementations) {
     const ops = 500000;
     const benchmark = new CacheBenchmark(impl);
+    benchmark.resetCache(); // Reset cache before benchmark
     const time = await benchmark.benchmarkLRUEviction(10000, ops);
     console.log(`${impl.name.padEnd(12)} | ${formatOpsPerSec(ops, time)}`);
     benchmark.dispose();
@@ -375,7 +424,9 @@ async function runOriginalBenchmarks() {
   // Basic set operations
   const setOperations = [10000, 1000000, 10000000];
   for (const count of setOperations) {
-    const benchmark = new CacheBenchmark(new NeocacheImpl({ maxSize: 10000 }));
+    const impl = new NeocacheImpl({ maxSize: 10000 });
+    const benchmark = new CacheBenchmark(impl);
+    benchmark.resetCache(); // Reset cache before benchmark
     const time = await benchmark.benchmarkSet(count);
     console.log(
       `Setting ${count} items: ${time.toFixed(2)}ms (${(
@@ -391,7 +442,9 @@ async function runOriginalBenchmarks() {
   // Basic get operations
   const getOperations = [100000, 1000000, 10000000];
   for (const count of getOperations) {
-    const benchmark = new CacheBenchmark(new NeocacheImpl());
+    const impl = new NeocacheImpl();
+    const benchmark = new CacheBenchmark(impl);
+    benchmark.resetCache(); // Reset cache before benchmark
     const time = await benchmark.benchmarkGet(count);
     console.log(
       `Getting ${count} items: ${time.toFixed(2)}ms (${(
@@ -405,7 +458,9 @@ async function runOriginalBenchmarks() {
   console.log('');
 
   // LRU eviction benchmark
-  const lruBenchmark = new CacheBenchmark(new NeocacheImpl());
+  const lruImpl = new NeocacheImpl();
+  const lruBenchmark = new CacheBenchmark(lruImpl);
+  lruBenchmark.resetCache(); // Reset cache before benchmark
   const lruEvictionTime = await lruBenchmark.benchmarkLRUEviction(100000, 500000); // Increased from 10000, 50000
   console.log(
     `LRU eviction with 100000 items cache adding 500000 items: ${lruEvictionTime.toFixed(
@@ -417,9 +472,9 @@ async function runOriginalBenchmarks() {
   console.log('');
 
   // Mixed operations
-  const mixedBenchmark = new CacheBenchmark(
-    new NeocacheImpl({ maxSize: 500000 }), // Increased from 50000
-  );
+  const mixedImpl = new NeocacheImpl({ maxSize: 500000 }); // Increased from 50000
+  const mixedBenchmark = new CacheBenchmark(mixedImpl);
+  mixedBenchmark.resetCache(); // Reset cache before benchmark
   const mixedTime = await mixedBenchmark.benchmarkMixedOperations(500000); // Increased from 50000
   console.log(
     `Mixed 500000 operations (random get/set): ${mixedTime.toFixed(2)}ms (${(
