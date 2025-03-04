@@ -38,26 +38,9 @@ export class Neocache {
   }
 
   async get(id: string, fetchFunc?: () => any, options?: CacheItemOptions) {
-    if (!id) {
-      return null;
-    }
-
-    if (this.cache.has(id)) {
-      const item = this.cache.get(id);
-      if (item && item.expireTime > Date.now()) {
-        this.cache.delete(id);
-        this.cache.set(id, item);
-        return item.data;
-      }
-    }
-
-    if (this.oldCache.has(id)) {
-      const item = this.oldCache.get(id);
-      if (item && item.expireTime > Date.now()) {
-        this.oldCache.delete(id);
-        this.cache.set(id, item);
-        return item.data;
-      }
+    const item = this.getOnly(id);
+    if (item) {
+      return item;
     }
 
     if (!fetchFunc) {
@@ -67,6 +50,21 @@ export class Neocache {
     const data = await fetchFunc();
     this.set(id, data, options);
     return data;
+  }
+
+  getOnly(id: string) {
+    if (this.cache.has(id)) {
+      const item = this.cache.get(id);
+      if (item.expireTime > Date.now()) {
+        return item.data;
+      }
+    } else if (this.oldCache.has(id)) {
+      const item = this.oldCache.get(id);
+      if (item && item.expireTime > Date.now()) {
+        return item.data;
+      }
+    }
+    return null;
   }
 
   /**
@@ -88,31 +86,28 @@ export class Neocache {
   }
 
   set(id: string, data: any, options?: CacheItemOptions) {
-    if (!id) {
-      return;
-    }
+    const expireTimeMs =
+      options?.expireTimeMs ?? this.options.defaultExpireTimeMs;
+    const expireTime = expireTimeMs
+      ? Date.now() + expireTimeMs
+      : Number.POSITIVE_INFINITY;
 
-    this.oldCache.delete(id);
+    this.cache.set(id, { data, expireTime });
 
-    // If this is an existing key, we need to remove it first to update the LRU order
-    if (this.cache.has(id)) {
-      this.cache.delete(id);
-    } else if (this.options.maxSize) {
+    if (this.options.maxSize) {
       if (this.cache.size >= this.options.maxSize) {
         this.oldCache = this.cache;
         this.cache = new Map<string, CacheItem>();
       }
     }
 
-    const expireTimeMs =
-      options?.expireTimeMs || this.options.defaultExpireTimeMs;
-    const expireTime = Date.now() + expireTimeMs;
-
-    this.cache.set(id, { data, expireTime });
-
-    if (!this.options.purgeIntervalMs) {
+    if (
+      !this.options.purgeIntervalMs ||
+      expireTime === Number.POSITIVE_INFINITY
+    ) {
       return;
     }
+
     const timeKey = Math.floor(expireTime / this.options.purgeIntervalMs) + 1;
     const keys = this.timeToKeyBucket.get(timeKey) ?? [];
     keys.push(id);

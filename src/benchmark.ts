@@ -33,8 +33,8 @@ class NeocacheImpl implements CacheImplementation {
     this.cache.set(key, value);
   }
 
-  async get(key: string): Promise<any> {
-    return this.cache.get(key);
+  get(key: string): any {
+    return this.cache.getOnly(key);
   }
 
   dispose(): void {
@@ -145,7 +145,7 @@ class CacheBenchmark {
    * Measures the time to get items from the cache
    */
   async benchmarkGet(count: number): Promise<number> {
-    const populateCount = Math.min(count, 10000);
+    const populateCount = Math.min(count, 100000); // Increased from 10000
 
     // First populate the cache
     try {
@@ -255,7 +255,7 @@ async function runComparativeBenchmarks() {
   };
 
   const cacheImplementations: CacheImplementation[] = [
-    new NodeCacheImpl(cacheOptions),
+    // new NodeCacheImpl(cacheOptions),
     new LRUCacheImpl(cacheOptions),
     new QuickLRUImpl({ maxSize: cacheOptions.maxSize }),
     new NeocacheImpl(cacheOptions),
@@ -265,19 +265,21 @@ async function runComparativeBenchmarks() {
   const formatOpsPerSec = (count: number, timeMs: number) => {
     if (timeMs <= 0) return 'N/A';
     const opsPerSec = count / (timeMs / 1000);
-    return `${opsPerSec.toFixed(0)} ops/sec`;
+    return opsPerSec >= 100000
+      ? `${(opsPerSec / 1000000).toFixed(2)}M ops/sec`
+      : `${opsPerSec.toFixed(0)} ops/sec`;
   };
 
   // Table header
   console.log('SET OPERATIONS');
   console.log('─────────────────────────────────────────────────────────');
   console.log(
-    'Library      | 1,000 items    | 100,000 items   | 1,000,000 items  ',
+    'Library      | 100,000 items  | 1,000,000 items | 10,000,000 items ',
   );
   console.log('─────────────────────────────────────────────────────────');
 
   // Set operation benchmarks
-  const setOperations = [1000, 100000, 1000000];
+  const setOperations = [100000, 1000000, 10000000];
   for (const impl of cacheImplementations) {
     const results = [];
 
@@ -301,11 +303,11 @@ async function runComparativeBenchmarks() {
   console.log('GET OPERATIONS');
   console.log('─────────────────────────────────────────────────────────');
   console.log(
-    'Library      | 1,000 items    | 100,000 items   | 1,000,000 items  ',
+    'Library      | 100,000 items  | 1,000,000 items | 10,000,000 items ',
   );
   console.log('─────────────────────────────────────────────────────────');
 
-  const getOperations = [1000, 100000, 1000000];
+  const getOperations = [100000, 1000000, 10000000];
   for (const impl of cacheImplementations) {
     const results = [];
 
@@ -326,15 +328,15 @@ async function runComparativeBenchmarks() {
   console.log('\n');
 
   // MIXED OPERATIONS
-  console.log('MIXED OPERATIONS (20,000 random get/set operations)');
+  console.log('MIXED OPERATIONS (500,000 random get/set operations)');
   console.log('─────────────────────────────────────────────────────────');
   console.log('Library      | Performance    ');
   console.log('─────────────────────────────');
 
   for (const impl of cacheImplementations) {
     const benchmark = new CacheBenchmark(impl);
-    const time = await benchmark.benchmarkMixedOperations(20000);
-    console.log(`${impl.name.padEnd(12)} | ${formatOpsPerSec(20000, time)}`);
+    const time = await benchmark.benchmarkMixedOperations(500000);
+    console.log(`${impl.name.padEnd(12)} | ${formatOpsPerSec(500000, time)}`);
     benchmark.dispose();
   }
 
@@ -346,13 +348,13 @@ async function runComparativeBenchmarks() {
   const lruCacheImplementations = cacheImplementations.filter(
     (impl) => impl.name !== 'node-cache',
   );
-  console.log('LRU EVICTION (adding 50,000 items to a cache of 10,000 items)');
+  console.log('LRU EVICTION (adding 500,000 items to a cache of 10,000 items)');
   console.log('─────────────────────────────────────────────────────────');
   console.log('Library      | Performance    ');
   console.log('─────────────────────────────');
 
   for (const impl of lruCacheImplementations) {
-    const ops = 50000;
+    const ops = 500000;
     const benchmark = new CacheBenchmark(impl);
     const time = await benchmark.benchmarkLRUEviction(10000, ops);
     console.log(`${impl.name.padEnd(12)} | ${formatOpsPerSec(ops, time)}`);
@@ -371,9 +373,9 @@ async function runOriginalBenchmarks() {
   console.log('Running Neocache Benchmarks...\n');
 
   // Basic set operations
-  const setOperations = [1000, 10000, 10000000];
+  const setOperations = [10000, 1000000, 10000000];
   for (const count of setOperations) {
-    const benchmark = new CacheBenchmark(new NeocacheImpl({ maxSize: 1000 }));
+    const benchmark = new CacheBenchmark(new NeocacheImpl({ maxSize: 10000 }));
     const time = await benchmark.benchmarkSet(count);
     console.log(
       `Setting ${count} items: ${time.toFixed(2)}ms (${(
@@ -387,7 +389,7 @@ async function runOriginalBenchmarks() {
   console.log('');
 
   // Basic get operations
-  const getOperations = [1000, 10000, 100000];
+  const getOperations = [100000, 1000000, 10000000];
   for (const count of getOperations) {
     const benchmark = new CacheBenchmark(new NeocacheImpl());
     const time = await benchmark.benchmarkGet(count);
@@ -404,11 +406,11 @@ async function runOriginalBenchmarks() {
 
   // LRU eviction benchmark
   const lruBenchmark = new CacheBenchmark(new NeocacheImpl());
-  const lruEvictionTime = await lruBenchmark.benchmarkLRUEviction(10000, 5000);
+  const lruEvictionTime = await lruBenchmark.benchmarkLRUEviction(100000, 500000); // Increased from 10000, 50000
   console.log(
-    `LRU eviction with 10000 items cache adding 5000 items: ${lruEvictionTime.toFixed(
+    `LRU eviction with 100000 items cache adding 500000 items: ${lruEvictionTime.toFixed(
       2,
-    )}ms (${(5000 / (lruEvictionTime / 1000)).toFixed(0)} ops/sec)`,
+    )}ms (${(500000 / (lruEvictionTime / 1000)).toFixed(0)} ops/sec)`,
   );
   lruBenchmark.dispose();
 
@@ -416,12 +418,12 @@ async function runOriginalBenchmarks() {
 
   // Mixed operations
   const mixedBenchmark = new CacheBenchmark(
-    new NeocacheImpl({ maxSize: 50000 }),
+    new NeocacheImpl({ maxSize: 500000 }), // Increased from 50000
   );
-  const mixedTime = await mixedBenchmark.benchmarkMixedOperations(50000);
+  const mixedTime = await mixedBenchmark.benchmarkMixedOperations(500000); // Increased from 50000
   console.log(
-    `Mixed 50000 operations (random get/set): ${mixedTime.toFixed(2)}ms (${(
-      50000 /
+    `Mixed 500000 operations (random get/set): ${mixedTime.toFixed(2)}ms (${(
+      500000 /
       (mixedTime / 1000)
     ).toFixed(0)} ops/sec)`,
   );
