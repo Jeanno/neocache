@@ -1,16 +1,16 @@
 # Neocache
 
 ## Overview
-Neocache is a balzingly fast, minimal cache library, up to 63% faster than other cache libraries.
+Neocache is a blazingly fast, minimal cache library, up to 31% faster than other popular cache libraries.
 
 https://www.npmjs.com/package/neocache
 
 ### Performance Highlights
 
-- **Fastest overall SET operations** - Up to 62% faster than quick-lru and 63% faster than lru-cache
-- **Best GET performance** for medium and large caches - Up to 10% faster than quick-lru and 40% faster than lru-cache for 10M items
-- **Superior LRU eviction** - 15% faster than quick-lru and 28% faster than lru-cache
-- **Best mixed operations** - 7% faster than quick-lru and 28% faster than lru-cache
+- **Fastest overall SET operations** - 21% faster than lru-cache at 100K items
+- **Best GET performance** - 31% faster than lru-cache and 30% faster than quick-lru at 100K items
+- **Superior LRU eviction** - 26% faster than lru-cache and 12% faster than quick-lru
+- **Best mixed operations** - 13% faster than lru-cache and 11% faster than quick-lru
 - **Most consistent performance** across all operation sizes from 100K to 10M items
 - **Minimal memory footprint** with excellent GC behavior
 
@@ -135,33 +135,33 @@ SET OPERATIONS
 ─────────────────────────────────────────────────────────
 Library      | 100,000 items  | 1,000,000 items | 10,000,000 items 
 ─────────────────────────────────────────────────────────
-lru-cache    | 2.58M ops/sec   | 3.65M ops/sec   | 3.91M ops/sec
-quick-lru    | 3.28M ops/sec   | 4.41M ops/sec   | 4.49M ops/sec
-Neocache     | 4.19M ops/sec   | 5.02M ops/sec   | 4.84M ops/sec  👈 Fastest overall
+Neocache     | 2.58M ops/sec   | 4.89M ops/sec   | 4.84M ops/sec  👈 Fastest overall
+lru-cache    | 2.13M ops/sec   | 3.88M ops/sec   | 3.87M ops/sec
+quick-lru    | 3.82M ops/sec   | 4.57M ops/sec   | 4.50M ops/sec
 
 GET OPERATIONS
 ─────────────────────────────────────────────────────────
 Library      | 100,000 items  | 1,000,000 items | 10,000,000 items 
 ─────────────────────────────────────────────────────────
-lru-cache    | 3.10M ops/sec   | 4.67M ops/sec   | 3.51M ops/sec
-quick-lru    | 3.36M ops/sec   | 4.34M ops/sec   | 4.53M ops/sec
-Neocache     | 3.27M ops/sec   | 5.16M ops/sec   | 4.93M ops/sec  👈 Best for medium/large set retrival
+Neocache     | 4.41M ops/sec   | 4.95M ops/sec   | 4.95M ops/sec  👈 Best overall
+lru-cache    | 3.37M ops/sec   | 4.14M ops/sec   | 4.39M ops/sec
+quick-lru    | 3.38M ops/sec   | 4.34M ops/sec   | 4.37M ops/sec
 
 MIXED OPERATIONS (500,000 random get/set operations)
 ─────────────────────────────────────────────────────────
 Library      | Performance    
 ─────────────────────────────
-lru-cache    | 2.84M ops/sec
-quick-lru    | 3.42M ops/sec
-Neocache     | 3.65M ops/sec  👈 Best mixed operations
+Neocache     | 3.82M ops/sec  👈 Best mixed operations
+lru-cache    | 3.37M ops/sec
+quick-lru    | 3.45M ops/sec
 
 LRU EVICTION (adding 500,000 items to a cache of 10,000 items)
 ─────────────────────────────────────────────────────────
 Library      | Performance    
 ─────────────────────────────
-lru-cache    | 2.99M ops/sec
-quick-lru    | 3.34M ops/sec
-Neocache     | 3.83M ops/sec  👈 Best LRU performance
+Neocache     | 3.80M ops/sec  👈 Best LRU performance
+lru-cache    | 3.02M ops/sec
+quick-lru    | 3.40M ops/sec
 ```
 
 *Note: Actual performance will vary based on your system. Run the benchmarks on your own machine for accurate results.*

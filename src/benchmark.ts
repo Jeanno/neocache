@@ -261,7 +261,7 @@ class CacheBenchmark {
       const start = performance.now();
 
       for (let i = 0; i < operationCount; i++) {
-        const operation = Math.random() > 0.8 ? 'get' : 'set';
+        const operation = Math.random() > 0.5 ? 'get' : 'set';
         const keyIndex = Math.floor(Math.random() * keySpace);
 
         if (operation === 'get') {
@@ -301,9 +301,9 @@ async function runComparativeBenchmarks() {
   };
 
   const cacheImplementations: CacheImplementation[] = [
-    new LRUCacheImpl(cacheOptions),
-    new QuickLRUImpl({ maxSize: cacheOptions.maxSize }),
     new NeocacheImpl(cacheOptions),
+    new LRUCacheImpl(cacheOptions),
+    new QuickLRUImpl(cacheOptions),
   ];
 
   // Format utility
@@ -461,7 +461,10 @@ async function runOriginalBenchmarks() {
   const lruImpl = new NeocacheImpl();
   const lruBenchmark = new CacheBenchmark(lruImpl);
   lruBenchmark.resetCache(); // Reset cache before benchmark
-  const lruEvictionTime = await lruBenchmark.benchmarkLRUEviction(100000, 500000); // Increased from 10000, 50000
+  const lruEvictionTime = await lruBenchmark.benchmarkLRUEviction(
+    100000,
+    500000,
+  ); // Increased from 10000, 50000
   console.log(
     `LRU eviction with 100000 items cache adding 500000 items: ${lruEvictionTime.toFixed(
       2,
