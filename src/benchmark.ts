@@ -3,6 +3,7 @@ import { performance } from 'perf_hooks';
 import NodeCache from 'node-cache';
 import { LRUCache } from 'lru-cache';
 import QuickLRU from 'quick-lru';
+import memoryCache from 'memory-cache';
 
 /**
  * Interface for all cache implementations to ensure consistent benchmarking
@@ -12,7 +13,7 @@ interface CacheImplementation {
   set(key: string, value: any): void;
   get(key: string): Promise<any> | any;
   dispose?(): void;
-  reset(): void; // New method for resetting cache state
+  reset(): void;
 }
 
 /**
@@ -68,8 +69,8 @@ class NodeCacheImpl implements CacheImplementation {
       stdTTL: options?.defaultExpireTimeMs
         ? options.defaultExpireTimeMs / 1000
         : 3600,
-      maxKeys: 1000000,
-      checkperiod: 0, // disable automatic deletion during benchmarks
+      maxKeys: options?.maxSize || 1000,
+      checkperiod: null, // disable automatic deletion during benchmarks
     });
   }
 
@@ -86,7 +87,13 @@ class NodeCacheImpl implements CacheImplementation {
   }
 
   reset(): void {
-    this.cache.flushAll();
+    this.cache = new NodeCache({
+      stdTTL: this.options?.defaultExpireTimeMs
+        ? this.options.defaultExpireTimeMs / 1000
+        : 3600,
+      maxKeys: this.options?.maxSize || 1000,
+      checkperiod: null, // disable automatic deletion during benchmarks
+    });
   }
 }
 
@@ -152,6 +159,31 @@ class QuickLRUImpl implements CacheImplementation {
       maxSize: this.options?.maxSize || 1000,
       maxAge: this.options?.defaultExpireTimeMs ?? 3600000,
     });
+  }
+}
+
+/**
+ * memory-cache implementation
+ */
+class MemoryCacheImpl implements CacheImplementation {
+  name = 'memory-cache';
+  private options?: { maxSize?: number; defaultExpireTimeMs?: number };
+
+  constructor(options?: { maxSize?: number; defaultExpireTimeMs?: number }) {
+    this.options = options;
+    // memory-cache doesn't have constructor options, we'll handle ttl in the set method
+  }
+
+  set(key: string, value: any): void {
+    memoryCache.put(key, value, this.options?.defaultExpireTimeMs);
+  }
+
+  get(key: string): any {
+    return memoryCache.get(key);
+  }
+
+  reset(): void {
+    memoryCache.clear();
   }
 }
 
@@ -280,12 +312,93 @@ class CacheBenchmark {
     }
   }
 
+  /**
+   * Benchmarks performance of fixed-size cache implementations
+   * by repeatedly inserting the same keys
+   */
+  async benchmarkFixedSizeCache(
+    uniqueKeysCount: number,
+    totalOperations: number,
+  ): Promise<number> {
+    try {
+      // First populate the cache with initial keys
+      for (let i = 0; i < uniqueKeysCount; i++) {
+        this.cache.set(`key-${i}`, `value-${i}`);
+      }
+      const start = performance.now();
+
+      // Repeatedly insert the same keys
+      for (let i = 0; i < totalOperations; i++) {
+        // Use modulo to cycle through the same set of keys
+        const keyIndex = i % uniqueKeysCount;
+        this.cache.set(`key-${keyIndex}`, `updated-value-${i}`);
+
+        // Occasionally check if the key exists (every 10 operations)
+        if (i % 10 === 0) {
+          await this.cache.get(`key-${keyIndex}`);
+        }
+      }
+
+      const end = performance.now();
+      return end - start;
+    } catch (error) {
+      console.error(`Error in fixed size cache benchmark: ${error.message}`);
+      return 0;
+    }
+  }
+
+  /**
+   * Benchmarks mixed get/set operations on a fixed-size cache
+   */
+  async benchmarkFixedSizeMixedOperations(
+    uniqueKeysCount: number,
+    totalOperations: number,
+  ): Promise<number> {
+    try {
+      // First populate the cache with initial keys
+      for (let i = 0; i < uniqueKeysCount; i++) {
+        this.cache.set(`key-${i}`, `value-${i}`);
+      }
+      const start = performance.now();
+
+      // Perform mixed operations
+      for (let i = 0; i < totalOperations; i++) {
+        // Use modulo to cycle through the same set of keys
+        const keyIndex = i % uniqueKeysCount;
+        const operation = Math.random() > 0.5 ? 'get' : 'set';
+
+        if (operation === 'get') {
+          await this.cache.get(`key-${keyIndex}`);
+        } else {
+          this.cache.set(`key-${keyIndex}`, `updated-value-${i}`);
+        }
+      }
+
+      const end = performance.now();
+      return end - start;
+    } catch (error) {
+      console.error(
+        `Error in fixed size mixed operations benchmark: ${error.message}`,
+      );
+      return 0;
+    }
+  }
+
   dispose() {
     if (this.cache.dispose) {
       this.cache.dispose();
     }
   }
 }
+
+// Format utility
+const formatOpsPerSec = (count: number, timeMs: number) => {
+  if (timeMs <= 0) return 'N/A';
+  const opsPerSec = count / (timeMs / 1000);
+  return opsPerSec >= 100000
+    ? `${(opsPerSec / 1000000).toFixed(2)}M ops/sec`
+    : `${opsPerSec.toFixed(0)} ops/sec`;
+};
 
 /**
  * Run benchmarks across all cache implementations
@@ -305,15 +418,6 @@ async function runComparativeBenchmarks() {
     new LRUCacheImpl(cacheOptions),
     new QuickLRUImpl(cacheOptions),
   ];
-
-  // Format utility
-  const formatOpsPerSec = (count: number, timeMs: number) => {
-    if (timeMs <= 0) return 'N/A';
-    const opsPerSec = count / (timeMs / 1000);
-    return opsPerSec >= 100000
-      ? `${(opsPerSec / 1000000).toFixed(2)}M ops/sec`
-      : `${opsPerSec.toFixed(0)} ops/sec`;
-  };
 
   // Table header
   console.log('SET OPERATIONS');
@@ -387,7 +491,6 @@ async function runComparativeBenchmarks() {
     console.log(`${impl.name.padEnd(12)} | ${formatOpsPerSec(500000, time)}`);
     benchmark.dispose();
   }
-
   console.log('\n');
 
   // LRU EVICTION
@@ -407,6 +510,75 @@ async function runComparativeBenchmarks() {
     benchmark.resetCache(); // Reset cache before benchmark
     const time = await benchmark.benchmarkLRUEviction(10000, ops);
     console.log(`${impl.name.padEnd(12)} | ${formatOpsPerSec(ops, time)}`);
+    benchmark.dispose();
+  }
+
+  console.log('\n');
+
+  console.log('Benchmark complete!');
+}
+
+async function runComparativeFixedSizeBenchmark() {
+  // FIXED SIZE CACHE BENCHMARK (node-cache and memory-cache)
+  console.log(
+    'FIXED SIZE CACHE (10,000 unique keys, 100,000 total operations)',
+  );
+  console.log('─────────────────────────────────────────────────────────');
+  console.log('Library      | Performance    ');
+  console.log('─────────────────────────────');
+
+  // Create specific implementations with max size set to 10,000
+  const config = {
+    maxSize: 10000,
+    defaultExpireTimeMs: 3600000,
+    purgeIntervalMs: null,
+  };
+
+  const fixedSizeCacheImpls = [
+    new NodeCacheImpl(config),
+    new MemoryCacheImpl(config),
+    new LRUCacheImpl(config),
+    new QuickLRUImpl(config),
+    new NeocacheImpl(config),
+  ];
+
+  for (const impl of fixedSizeCacheImpls) {
+    const benchmark = new CacheBenchmark(impl);
+    benchmark.resetCache();
+    const uniqueKeysCount = 5000;
+    const totalOperations = 1000000;
+    const time = await benchmark.benchmarkFixedSizeCache(
+      uniqueKeysCount,
+      totalOperations,
+    );
+    console.log(
+      `${impl.name.padEnd(12)} | ${formatOpsPerSec(totalOperations, time)}`,
+    );
+    benchmark.dispose();
+  }
+
+  console.log('\n');
+
+  // FIXED SIZE CACHE MIXED OPERATIONS BENCHMARK
+  console.log(
+    'FIXED SIZE CACHE MIXED OPERATIONS (5,000 unique keys, 1,000,000 mixed get/set operations)',
+  );
+  console.log('─────────────────────────────────────────────────────────');
+  console.log('Library      | Performance    ');
+  console.log('─────────────────────────────');
+
+  for (const impl of fixedSizeCacheImpls) {
+    const benchmark = new CacheBenchmark(impl);
+    benchmark.resetCache();
+    const uniqueKeysCount = 5000;
+    const totalOperations = 1000000;
+    const time = await benchmark.benchmarkFixedSizeMixedOperations(
+      uniqueKeysCount,
+      totalOperations,
+    );
+    console.log(
+      `${impl.name.padEnd(12)} | ${formatOpsPerSec(totalOperations, time)}`,
+    );
     benchmark.dispose();
   }
 
@@ -444,7 +616,7 @@ async function runOriginalBenchmarks() {
   for (const count of getOperations) {
     const impl = new NeocacheImpl();
     const benchmark = new CacheBenchmark(impl);
-    benchmark.resetCache(); // Reset cache before benchmark
+    benchmark.resetCache();
     const time = await benchmark.benchmarkGet(count);
     console.log(
       `Getting ${count} items: ${time.toFixed(2)}ms (${(
@@ -460,11 +632,11 @@ async function runOriginalBenchmarks() {
   // LRU eviction benchmark
   const lruImpl = new NeocacheImpl();
   const lruBenchmark = new CacheBenchmark(lruImpl);
-  lruBenchmark.resetCache(); // Reset cache before benchmark
+  lruBenchmark.resetCache();
   const lruEvictionTime = await lruBenchmark.benchmarkLRUEviction(
     100000,
     500000,
-  ); // Increased from 10000, 50000
+  );
   console.log(
     `LRU eviction with 100000 items cache adding 500000 items: ${lruEvictionTime.toFixed(
       2,
@@ -475,10 +647,10 @@ async function runOriginalBenchmarks() {
   console.log('');
 
   // Mixed operations
-  const mixedImpl = new NeocacheImpl({ maxSize: 500000 }); // Increased from 50000
+  const mixedImpl = new NeocacheImpl({ maxSize: 500000 });
   const mixedBenchmark = new CacheBenchmark(mixedImpl);
-  mixedBenchmark.resetCache(); // Reset cache before benchmark
-  const mixedTime = await mixedBenchmark.benchmarkMixedOperations(500000); // Increased from 50000
+  mixedBenchmark.resetCache();
+  const mixedTime = await mixedBenchmark.benchmarkMixedOperations(500000);
   console.log(
     `Mixed 500000 operations (random get/set): ${mixedTime.toFixed(2)}ms (${(
       500000 /
@@ -488,13 +660,13 @@ async function runOriginalBenchmarks() {
   mixedBenchmark.dispose();
 }
 
-// Run the benchmarks when this file is executed directly
-if (require.main === module) {
+async function main() {
   if (process.argv.includes('--original')) {
     runOriginalBenchmarks().catch(console.error);
   } else {
-    runComparativeBenchmarks().catch(console.error);
+    await runComparativeBenchmarks();
+    await runComparativeFixedSizeBenchmark();
   }
 }
 
-export { CacheBenchmark, NeocacheImpl as Neocache };
+main();
