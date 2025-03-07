@@ -61,6 +61,7 @@ export class Neocache {
     } else if (this.oldCache.has(id)) {
       const item = this.oldCache.get(id);
       if (item && item.expireTime > Date.now()) {
+        this.cache.set(id, item);
         return item.data;
       }
     }
