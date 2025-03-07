@@ -32,6 +32,7 @@
     "memory-cache": "^0.2.0",
     "node-cache": "^5.1.2",
     "quick-lru": "^7.0.0",
+    "tiny-lru": "^11.2.11",
     "ts-jest": "^29.0.5",
     "ts-node": "^10.9.1",
     "tsx": "^4.19.3",

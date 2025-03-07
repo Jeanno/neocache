@@ -4,6 +4,7 @@ import NodeCache from 'node-cache';
 import { LRUCache } from 'lru-cache';
 import QuickLRU from 'quick-lru';
 import memoryCache from 'memory-cache';
+import * as tinyLru from 'tiny-lru';
 
 /**
  * Interface for all cache implementations to ensure consistent benchmarking
@@ -184,6 +185,33 @@ class MemoryCacheImpl implements CacheImplementation {
 
   reset(): void {
     memoryCache.clear();
+  }
+}
+
+/**
+ * tiny-lru implementation
+ */
+class TinyLRUImpl implements CacheImplementation {
+  name = 'tiny-lru';
+  private cache: ReturnType<typeof tinyLru.lru>;
+  private options?: { maxSize?: number; defaultExpireTimeMs?: number };
+
+  constructor(options?: { maxSize?: number; defaultExpireTimeMs?: number }) {
+    this.options = options;
+    this.cache = tinyLru.lru(options?.maxSize || 1000, options?.defaultExpireTimeMs);
+  }
+
+  set(key: string, value: any): void {
+    this.cache.set(key, value);
+  }
+
+  get(key: string): any {
+    return this.cache.get(key);
+  }
+
+  reset(): void {
+    this.cache.clear();
+    this.cache = tinyLru.lru(this.options?.maxSize || 1000, this.options?.defaultExpireTimeMs);
   }
 }
 
@@ -417,6 +445,7 @@ async function runComparativeBenchmarks() {
     new NeocacheImpl(cacheOptions),
     new LRUCacheImpl(cacheOptions),
     new QuickLRUImpl(cacheOptions),
+    new TinyLRUImpl(cacheOptions),
   ];
 
   // Table header
@@ -539,6 +568,7 @@ async function runComparativeFixedSizeBenchmark() {
     new MemoryCacheImpl(config),
     new LRUCacheImpl(config),
     new QuickLRUImpl(config),
+    new TinyLRUImpl(config),
     new NeocacheImpl(config),
   ];
 
