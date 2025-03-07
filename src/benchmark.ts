@@ -12,7 +12,7 @@ import * as tinyLru from 'tiny-lru';
 interface CacheImplementation {
   name: string;
   set(key: string, value: any): void;
-  get(key: string): Promise<any> | any;
+  get(key: string): any;
   dispose?(): void;
   reset(): void;
 }
@@ -270,7 +270,7 @@ class CacheBenchmark {
     // Read within the range we populated
     for (const i of keys) {
       const keyIndex = i % populateCount;
-      await this.cache.get(`key-${keyIndex}`);
+      this.cache.get(`key-${keyIndex}`);
     }
 
     const end = performance.now();
@@ -325,7 +325,7 @@ class CacheBenchmark {
         const keyIndex = Math.floor(Math.random() * keySpace);
 
         if (operation === 'get') {
-          await this.cache.get(`key-${keyIndex}`);
+          this.cache.get(`key-${keyIndex}`);
         } else {
           this.cache.set(`key-${keyIndex}`, `value-${i}`);
         }
@@ -363,7 +363,7 @@ class CacheBenchmark {
 
         // Occasionally check if the key exists (every 10 operations)
         if (i % 10 === 0) {
-          await this.cache.get(`key-${keyIndex}`);
+          this.cache.get(`key-${keyIndex}`);
         }
       }
 
@@ -396,7 +396,7 @@ class CacheBenchmark {
         const operation = Math.random() > 0.5 ? 'get' : 'set';
 
         if (operation === 'get') {
-          await this.cache.get(`key-${keyIndex}`);
+          this.cache.get(`key-${keyIndex}`);
         } else {
           this.cache.set(`key-${keyIndex}`, `updated-value-${i}`);
         }

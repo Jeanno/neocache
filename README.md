@@ -7,10 +7,11 @@ https://www.npmjs.com/package/neocache
 
 ### Performance Highlights
 
-- **Fastest overall SET operations** - 21% faster than lru-cache at 100K items
-- **Best GET performance** - 31% faster than lru-cache and 30% faster than quick-lru at 100K items
-- **Superior LRU eviction** - 26% faster than lru-cache and 12% faster than quick-lru
-- **Best mixed operations** - 13% faster than lru-cache and 11% faster than quick-lru
+- **Fastest overall SET operations** - Up to 25% faster than lru-cache for large datasets
+- **Best GET performance** - Up to 33% faster than lru-cache and 23% faster than quick-lru for large datasets
+- **Superior mixed operations** - 14% faster than lru-cache and 14% faster than quick-lru
+- **Excellent LRU eviction** - 19% faster than lru-cache
+- **Best fixed size cache performance** - 2% faster than quick-lru and 25% faster than lru-cache
 - **Most consistent performance** across all operation sizes from 100K to 10M items
 - **Minimal memory footprint** with excellent GC behavior
 
@@ -120,6 +121,8 @@ The comparative benchmark compares Neocache against other popular TypeScript/Jav
 - [node-cache](https://www.npmjs.com/package/node-cache)
 - [lru-cache](https://www.npmjs.com/package/lru-cache)
 - [quick-lru](https://www.npmjs.com/package/quick-lru)
+- [tiny-lru](https://www.npmjs.com/package/tiny-lru)
+- [memory-cache](https://www.npmjs.com/package/memory-cache)
 
 This will output performance metrics for various operations:
 
@@ -127,6 +130,7 @@ This will output performance metrics for various operations:
 2. **GET operations**: Measures performance of retrieving items from the cache
 3. **LRU eviction**: Measures performance when adding items to a full cache, triggering LRU eviction
 4. **Mixed operations**: Measures performance with a random mix of get and set operations
+5. **Fixed size cache operations**: Measures performance with a fixed size cache and repeated operations on the same keys
 
 Sample benchmark results:
 
@@ -135,33 +139,48 @@ SET OPERATIONS
 ─────────────────────────────────────────────────────────
 Library      | 100,000 items  | 1,000,000 items | 10,000,000 items 
 ─────────────────────────────────────────────────────────
-Neocache     | 2.58M ops/sec   | 4.89M ops/sec   | 4.84M ops/sec  👈 Fastest overall
-lru-cache    | 2.13M ops/sec   | 3.88M ops/sec   | 3.87M ops/sec
-quick-lru    | 3.82M ops/sec   | 4.57M ops/sec   | 4.50M ops/sec
+Neocache     | 2.52M ops/sec   | 4.70M ops/sec   | 4.77M ops/sec  👈 Fastest overall
+lru-cache    | 2.84M ops/sec   | 3.44M ops/sec   | 3.83M ops/sec
+quick-lru    | 3.65M ops/sec   | 4.26M ops/sec   | 4.16M ops/sec
+tiny-lru     | 1.64M ops/sec   | 1.33M ops/sec   | 1.28M ops/sec
 
 GET OPERATIONS
 ─────────────────────────────────────────────────────────
 Library      | 100,000 items  | 1,000,000 items | 10,000,000 items 
 ─────────────────────────────────────────────────────────
-Neocache     | 4.41M ops/sec   | 4.95M ops/sec   | 4.95M ops/sec  👈 Best overall
-lru-cache    | 3.37M ops/sec   | 4.14M ops/sec   | 4.39M ops/sec
-quick-lru    | 3.38M ops/sec   | 4.34M ops/sec   | 4.37M ops/sec
+Neocache     | 5.51M ops/sec   | 6.86M ops/sec   | 8.58M ops/sec  👈 Best overall
+lru-cache    | 4.14M ops/sec   | 6.73M ops/sec   | 7.67M ops/sec
+quick-lru    | 3.95M ops/sec   | 6.13M ops/sec   | 6.95M ops/sec
+tiny-lru     | 1.79M ops/sec   | 2.09M ops/sec   | 2.13M ops/sec
 
 MIXED OPERATIONS (500,000 random get/set operations)
 ─────────────────────────────────────────────────────────
 Library      | Performance    
 ─────────────────────────────
-Neocache     | 3.82M ops/sec  👈 Best mixed operations
-lru-cache    | 3.37M ops/sec
-quick-lru    | 3.45M ops/sec
+Neocache     | 4.11M ops/sec  👈 Best mixed operations
+lru-cache    | 3.61M ops/sec
+quick-lru    | 3.59M ops/sec
+tiny-lru     | 1.31M ops/sec
 
 LRU EVICTION (adding 500,000 items to a cache of 10,000 items)
 ─────────────────────────────────────────────────────────
 Library      | Performance    
 ─────────────────────────────
-Neocache     | 3.80M ops/sec  👈 Best LRU performance
-lru-cache    | 3.02M ops/sec
-quick-lru    | 3.40M ops/sec
+Neocache     | 3.38M ops/sec  👈 Best LRU performance
+lru-cache    | 2.80M ops/sec
+quick-lru    | 3.32M ops/sec
+tiny-lru     | 1.23M ops/sec
+
+fixed size cache mixed operations (5,000 unique keys, 1,000,000 mixed get/set operations)
+─────────────────────────────────────────────────────────
+library      | performance    
+─────────────────────────────
+node-cache   | 2.81m ops/sec
+memory-cache | 2.56m ops/sec
+lru-cache    | 5.00m ops/sec
+quick-lru    | 5.92m ops/sec
+tiny-lru     | 2.70M ops/sec
+neocache     | 5.86m ops/sec
 ```
 
 *Note: Actual performance will vary based on your system. Run the benchmarks on your own machine for accurate results.*

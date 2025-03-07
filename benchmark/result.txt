@@ -1,71 +1,74 @@
+
+> neocache@2.3.0 benchmark
+> npx tsx src/benchmark.ts
+
 Comparative Cache Benchmarks
 
 ==========================
 
 SET OPERATIONS
 ─────────────────────────────────────────────────────────
-Library      | 100,000 items  | 1,000,000 items | 10,000,000 items
+Library      | 100,000 items  | 1,000,000 items | 10,000,000 items 
 ─────────────────────────────────────────────────────────
-Neocache     | 2.29M ops/sec   | 4.66M ops/sec   | 4.81M ops/sec
-lru-cache    | 1.95M ops/sec   | 3.87M ops/sec   | 3.97M ops/sec
-quick-lru    | 3.73M ops/sec   | 4.42M ops/sec   | 4.33M ops/sec
-tiny-lru     | 1.63M ops/sec   | 1.45M ops/sec   | 1.44M ops/sec
+Neocache     | 2.68M ops/sec   | 4.69M ops/sec   | 4.78M ops/sec
+lru-cache    | 3.03M ops/sec   | 3.77M ops/sec   | 3.85M ops/sec
+quick-lru    | 3.59M ops/sec   | 4.29M ops/sec   | 4.18M ops/sec
+tiny-lru     | 1.61M ops/sec   | 1.34M ops/sec   | 1.33M ops/sec
 
 
 GET OPERATIONS
 ─────────────────────────────────────────────────────────
-Library      | 100,000 items  | 1,000,000 items | 10,000,000 items
+Library      | 100,000 items  | 1,000,000 items | 10,000,000 items 
 ─────────────────────────────────────────────────────────
-Neocache     | 4.32M ops/sec   | 4.73M ops/sec   | 4.78M ops/sec
-lru-cache    | 3.34M ops/sec   | 4.37M ops/sec   | 4.53M ops/sec
-quick-lru    | 3.43M ops/sec   | 4.25M ops/sec   | 4.32M ops/sec
-tiny-lru     | 1.81M ops/sec   | 2.63M ops/sec   | 2.24M ops/sec
+Neocache     | 5.14M ops/sec   | 6.94M ops/sec   | 8.79M ops/sec
+lru-cache    | 4.20M ops/sec   | 8.19M ops/sec   | 8.40M ops/sec
+quick-lru    | 5.29M ops/sec   | 6.79M ops/sec   | 7.05M ops/sec
+tiny-lru     | 2.77M ops/sec   | 3.08M ops/sec   | 3.02M ops/sec
 
 
 MIXED OPERATIONS (500,000 random get/set operations)
 ─────────────────────────────────────────────────────────
-Library      | Performance
+Library      | Performance    
 ─────────────────────────────
-Neocache     | 3.64M ops/sec
-lru-cache    | 3.58M ops/sec
-quick-lru    | 2.76M ops/sec
-tiny-lru     | 1.32M ops/sec
+Neocache     | 4.44M ops/sec
+lru-cache    | 3.63M ops/sec
+quick-lru    | 4.07M ops/sec
+tiny-lru     | 1.51M ops/sec
 
 
 LRU EVICTION (adding 500,000 items to a cache of 10,000 items)
 ─────────────────────────────────────────────────────────
-Library      | Performance
+Library      | Performance    
 ─────────────────────────────
-Neocache     | 3.78M ops/sec
-lru-cache    | 2.82M ops/sec
-quick-lru    | 3.39M ops/sec
+Neocache     | 3.60M ops/sec
+lru-cache    | 2.71M ops/sec
+quick-lru    | 3.33M ops/sec
 tiny-lru     | 1.22M ops/sec
 
 
 Benchmark complete!
 FIXED SIZE CACHE (10,000 unique keys, 100,000 total operations)
 ─────────────────────────────────────────────────────────
-Library      | Performance
+Library      | Performance    
 ─────────────────────────────
-node-cache   | 2.46M ops/sec
-memory-cache | 1.88M ops/sec
-lru-cache    | 3.62M ops/sec
-quick-lru    | 5.81M ops/sec
-tiny-lru     | 3.95M ops/sec
-Neocache     | 5.42M ops/sec
+node-cache   | 3.05M ops/sec
+memory-cache | 2.22M ops/sec
+lru-cache    | 3.91M ops/sec
+quick-lru    | 5.17M ops/sec
+tiny-lru     | 4.11M ops/sec
+Neocache     | 5.87M ops/sec
 
 
 FIXED SIZE CACHE MIXED OPERATIONS (5,000 unique keys, 1,000,000 mixed get/set operations)
 ─────────────────────────────────────────────────────────
-Library      | Performance
+Library      | Performance    
 ─────────────────────────────
-node-cache   | 2.80M ops/sec
-memory-cache | 2.05M ops/sec
-lru-cache    | 4.19M ops/sec
-quick-lru    | 4.98M ops/sec
-tiny-lru     | 3.25M ops/sec
-Neocache     | 4.99M ops/sec
+node-cache   | 3.43M ops/sec
+memory-cache | 2.94M ops/sec
+lru-cache    | 5.14M ops/sec
+quick-lru    | 5.83M ops/sec
+tiny-lru     | 3.73M ops/sec
+Neocache     | 6.20M ops/sec
 
 
 Benchmark complete!
-
