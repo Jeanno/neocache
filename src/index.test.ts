@@ -69,11 +69,18 @@ test('LRU eviction - maxSize limit', async () => {
 
   // Add a new item, should evict the least recently used (item2)
   await cache.get('item4', () => 'value4');
+  await cache.get('item5', () => 'value5');
 
   expect(cache.size).toBe(3);
-  expect(await cache.get('item1')).toBe('value1'); // Should still exist
-  expect(await cache.get('item3')).toBe('value3'); // Should still exist
-  expect(await cache.get('item4')).toBe('value4'); // Should exist
+  expect(await cache.get('item1')).toBe('value1');
+  expect(await cache.get('item4')).toBe('value4');
+  expect(await cache.get('item5')).toBe('value5');
+
+  await cache.get('item1');
+  await cache.get('item6', () => 'value6');
+  await cache.get('item7', () => 'value7');
+  expect(await cache.get('item1')).toBe('value1');
+  expect(await cache.get('item2')).toBeNull();
 
   cache.dispose();
 });
