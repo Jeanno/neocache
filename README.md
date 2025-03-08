@@ -7,11 +7,10 @@ https://www.npmjs.com/package/neocache
 
 ### Performance Highlights
 
-- **Fastest overall SET operations** - Up to 25% faster than lru-cache for large datasets
-- **Best GET performance** - Up to 33% faster than lru-cache and 23% faster than quick-lru for large datasets
-- **Superior mixed operations** - 14% faster than lru-cache and 14% faster than quick-lru
-- **Excellent LRU eviction** - 19% faster than lru-cache
-- **Best fixed size cache performance** - 2% faster than quick-lru and 25% faster than lru-cache
+- **Fastest overall SET operations** - Up to 27% faster than lru-cache for large datasets
+- **Great GET performance** - Up to 7% faster than quick-lru for large datasets
+- **Superior mixed operations** - 12% faster than lru-cache and 14% faster than quick-lru
+- **Excellent LRU eviction** - 38% faster than lru-cache
 - **Most consistent performance** across all operation sizes from 100K to 10M items
 - **Minimal memory footprint** with excellent GC behavior
 
@@ -137,50 +136,43 @@ Sample benchmark results:
 ```
 SET OPERATIONS
 ─────────────────────────────────────────────────────────
-Library      | 100,000 items  | 1,000,000 items | 10,000,000 items 
+Library      | 100,000 items  | 1,000,000 items | 10,000,000 items
 ─────────────────────────────────────────────────────────
-Neocache     | 2.52M ops/sec   | 4.70M ops/sec   | 4.77M ops/sec  👈 Fastest overall
-lru-cache    | 2.84M ops/sec   | 3.44M ops/sec   | 3.83M ops/sec
-quick-lru    | 3.65M ops/sec   | 4.26M ops/sec   | 4.16M ops/sec
-tiny-lru     | 1.64M ops/sec   | 1.33M ops/sec   | 1.28M ops/sec
+Neocache     | 2.73M ops/sec   | 4.90M ops/sec   | 4.82M ops/sec  👈 Fastest overall
+lru-cache    | 2.63M ops/sec   | 3.69M ops/sec   | 3.74M ops/sec
+quick-lru    | 3.79M ops/sec   | 4.47M ops/sec   | 4.50M ops/sec
+tiny-lru     | 1.59M ops/sec   | 1.44M ops/sec   | 1.36M ops/sec
+
 
 GET OPERATIONS
 ─────────────────────────────────────────────────────────
-Library      | 100,000 items  | 1,000,000 items | 10,000,000 items 
+Library      | 100,000 items  | 1,000,000 items | 10,000,000 items
 ─────────────────────────────────────────────────────────
-Neocache     | 5.51M ops/sec   | 6.86M ops/sec   | 8.58M ops/sec  👈 Best overall
-lru-cache    | 4.14M ops/sec   | 6.73M ops/sec   | 7.67M ops/sec
-quick-lru    | 3.95M ops/sec   | 6.13M ops/sec   | 6.95M ops/sec
-tiny-lru     | 1.79M ops/sec   | 2.09M ops/sec   | 2.13M ops/sec
+Neocache     | 5.94M ops/sec   | 7.68M ops/sec   | 7.27M ops/sec
+lru-cache    | 4.96M ops/sec   | 8.29M ops/sec   | 8.60M ops/sec
+quick-lru    | 5.45M ops/sec   | 6.92M ops/sec   | 7.49M ops/sec
+tiny-lru     | 2.86M ops/sec   | 4.01M ops/sec   | 3.91M ops/sec
+
 
 MIXED OPERATIONS (500,000 random get/set operations)
 ─────────────────────────────────────────────────────────
-Library      | Performance    
+Library      | Performance
 ─────────────────────────────
-Neocache     | 4.11M ops/sec  👈 Best mixed operations
-lru-cache    | 3.61M ops/sec
-quick-lru    | 3.59M ops/sec
-tiny-lru     | 1.31M ops/sec
+Neocache     | 4.78M ops/sec  👈 Best mixed operations
+lru-cache    | 4.24M ops/sec
+quick-lru    | 4.11M ops/sec
+tiny-lru     | 1.66M ops/sec
+
 
 LRU EVICTION (adding 500,000 items to a cache of 10,000 items)
 ─────────────────────────────────────────────────────────
-Library      | Performance    
+Library      | Performance
 ─────────────────────────────
-Neocache     | 3.38M ops/sec  👈 Best LRU performance
-lru-cache    | 2.80M ops/sec
-quick-lru    | 3.32M ops/sec
-tiny-lru     | 1.23M ops/sec
+Neocache     | 3.66M ops/sec  👈 Best LRU performance
+lru-cache    | 3.10M ops/sec
+quick-lru    | 3.51M ops/sec
+tiny-lru     | 1.36M ops/sec
 
-fixed size cache mixed operations (5,000 unique keys, 1,000,000 mixed get/set operations)
-─────────────────────────────────────────────────────────
-library      | performance    
-─────────────────────────────
-node-cache   | 2.81m ops/sec
-memory-cache | 2.56m ops/sec
-lru-cache    | 5.00m ops/sec
-quick-lru    | 5.92m ops/sec
-tiny-lru     | 2.70M ops/sec
-neocache     | 5.86m ops/sec
 ```
 
 *Note: Actual performance will vary based on your system. Run the benchmarks on your own machine for accurate results.*
