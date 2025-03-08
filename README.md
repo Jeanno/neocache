@@ -184,3 +184,8 @@ neocache     | 5.86m ops/sec
 ```
 
 *Note: Actual performance will vary based on your system. Run the benchmarks on your own machine for accurate results.*
+
+## Contributors
+
+@jeanno - main author
+@Gobd - provided test cases and feedback
