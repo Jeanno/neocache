@@ -187,5 +187,6 @@ neocache     | 5.86m ops/sec
 
 ## Contributors
 
-@jeanno - main author
-@Gobd - provided test cases and feedback
+[@jeanno](https://github.com/jeanno) - main author
+
+[@Gobd](https://github.com/Gobd) - provided test cases and feedback
