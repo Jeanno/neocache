@@ -137,6 +137,21 @@ test('invalidate removes item from LRU tracking', async () => {
   cache.dispose();
 });
 
+test('LRU should keep less than 2x the max size', async () => {
+  const cache = new Neocache({ maxSize: 2 });
+  for (let i = 0; i < 200; i++) {
+    cache.set(`key-${i}`, `value-${i}`);
+    let goodKeys = 0;
+    for (let j = 0; j <= i; j++) {
+      const v = await cache.get(`key-${j}`);
+      if (v) {
+        goodKeys++;
+      }
+    }
+    expect(goodKeys).toBeLessThanOrEqual(4);
+  }
+});
+
 test('expired items free up slots for new items', async () => {
   const cache = new Neocache({
     maxSize: 3,
