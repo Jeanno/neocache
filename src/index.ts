@@ -62,6 +62,15 @@ export class Neocache {
       const item = this.oldCache.get(id);
       if (item && item.expireTime > Date.now()) {
         this.cache.set(id, item);
+
+        if (
+          this.cache.size >= this.options.maxSize ??
+          Number.POSITIVE_INFINITY
+        ) {
+          this.oldCache = this.cache;
+          this.cache = new Map<string, CacheItem>();
+        }
+
         return item.data;
       }
     }
@@ -95,11 +104,9 @@ export class Neocache {
 
     this.cache.set(id, { data, expireTime });
 
-    if (this.options.maxSize) {
-      if (this.cache.size >= this.options.maxSize) {
-        this.oldCache = this.cache;
-        this.cache = new Map<string, CacheItem>();
-      }
+    if (this.cache.size >= this.options.maxSize ?? Number.POSITIVE_INFINITY) {
+      this.oldCache = this.cache;
+      this.cache = new Map<string, CacheItem>();
     }
 
     if (
