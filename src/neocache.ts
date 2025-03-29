@@ -1,3 +1,5 @@
+import { CacheRegistry } from './cache-registry';
+
 type CacheItem = {
   data: any;
   expireTime: number;
@@ -15,6 +17,14 @@ export type CacheOptions = {
 
 export class Neocache {
   static instance = new Neocache();
+  private static _cacheRegistry: CacheRegistry = null;
+
+  static get cacheRegistry(): CacheRegistry {
+    if (!this._cacheRegistry) {
+      this._cacheRegistry = new CacheRegistry();
+    }
+    return this._cacheRegistry;
+  }
 
   readonly options: CacheOptions = {
     defaultExpireTimeMs: 3600000,

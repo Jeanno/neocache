@@ -181,3 +181,8 @@ test('expired items free up slots for new items', async () => {
 
   cache.dispose();
 });
+
+test('cache registry helper', () => {
+  const registry = Neocache.cacheRegistry;
+  expect(registry).toBeTruthy();
+});
