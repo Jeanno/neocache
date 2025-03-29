@@ -1,4 +1,4 @@
-import Neocache from './index';
+import Neocache from './neocache';
 
 jest.setTimeout(10000);
 

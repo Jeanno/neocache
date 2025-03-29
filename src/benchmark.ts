@@ -1,4 +1,4 @@
-import Neocache from './index';
+import Neocache from './neocache';
 import { performance } from 'perf_hooks';
 import NodeCache from 'node-cache';
 import { LRUCache } from 'lru-cache';
