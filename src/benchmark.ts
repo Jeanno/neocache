@@ -198,7 +198,10 @@ class TinyLRUImpl implements CacheImplementation {
 
   constructor(options?: { maxSize?: number; defaultExpireTimeMs?: number }) {
     this.options = options;
-    this.cache = tinyLru.lru(options?.maxSize || 1000, options?.defaultExpireTimeMs);
+    this.cache = tinyLru.lru(
+      options?.maxSize || 1000,
+      options?.defaultExpireTimeMs,
+    );
   }
 
   set(key: string, value: any): void {
@@ -211,7 +214,10 @@ class TinyLRUImpl implements CacheImplementation {
 
   reset(): void {
     this.cache.clear();
-    this.cache = tinyLru.lru(this.options?.maxSize || 1000, this.options?.defaultExpireTimeMs);
+    this.cache = tinyLru.lru(
+      this.options?.maxSize || 1000,
+      this.options?.defaultExpireTimeMs,
+    );
   }
 }
 

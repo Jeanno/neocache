@@ -186,3 +186,43 @@ test('cache registry helper', () => {
   const registry = Neocache.cacheRegistry;
   expect(registry).toBeTruthy();
 });
+
+test('LRU with large cache (maxSize 1000)', async () => {
+  const cache = new Neocache({ maxSize: 1000 });
+
+  // Fill the cache with twice as many items as maxSize
+  for (let i = 0; i < 2000; i++) {
+    cache.get(`key-${i}`, () => `value-${i}`);
+  }
+
+  const size = cache.size;
+  expect(size).toBeLessThanOrEqual(1000);
+
+  cache.dispose();
+});
+
+test('LRU with large cache using cache registry', async () => {
+  const registry = Neocache.cacheRegistry;
+  const cacheId = 'largeRegistryCache';
+
+  // Create a cache through the registry with maxSize 1000
+  const config = {
+    defaultExpireTimeMs: 60 * 60 * 1000,
+    purgeIntervalMs: 600 * 1000,
+    maxSize: 1000,
+  };
+  const cache = registry.createCache(cacheId, config);
+
+  // Fill the cache with twice as many items as maxSize
+  for (let i = 0; i < 2000; i++) {
+    const randomKey = `key-${Math.floor(Math.random() * i)}`;
+
+    await cache.get(randomKey, () => `value-${randomKey}`);
+    if (i % 100 === 0) {
+      const size = cache.size;
+      expect(size).toBeLessThanOrEqual(1000);
+    }
+  }
+
+  cache.dispose();
+});
