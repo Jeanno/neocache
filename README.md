@@ -181,4 +181,6 @@ tiny-lru     | 1.36M ops/sec
 
 [@jeanno](https://github.com/jeanno) - main author
 
+[@vxern](https://github.com/vxern) - implemented generics
+
 [@Gobd](https://github.com/Gobd) - provided test cases and feedback
