@@ -36,7 +36,7 @@ export class CacheRegistry {
   /**
    * Get or create a cache with the given name
    */
-  getCache(name: string, options?: CacheOptions): Neocache<any>{
+  getCache(name: string, options?: CacheOptions): Neocache<any> {
     if (!this.caches.has(name)) {
       this.caches.set(
         name,
