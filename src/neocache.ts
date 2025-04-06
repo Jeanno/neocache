@@ -1,7 +1,7 @@
 import { CacheRegistry } from './cache-registry';
 
-type CacheItem = {
-  data: any;
+type CacheItem<T> = {
+  data: T;
   expireTime: number;
 };
 
@@ -15,7 +15,7 @@ export type CacheOptions = {
   maxSize?: number;
 };
 
-export class Neocache {
+export class Neocache<T> {
   static instance = new Neocache();
   private static _cacheRegistry: CacheRegistry = null;
 
@@ -32,8 +32,8 @@ export class Neocache {
   };
 
   // Main cache storage - using Map which preserves insertion order for LRU
-  private cache = new Map<string, CacheItem>();
-  private oldCache = new Map<string, CacheItem>();
+  private cache = new Map<string, CacheItem<T>>();
+  private oldCache = new Map<string, CacheItem<T>>();
 
   private timeToKeyBucket = new Map<number, string[]>();
   private purgeExpiredTimer: NodeJS.Timeout | null = null;
@@ -47,7 +47,7 @@ export class Neocache {
     }
   }
 
-  async get(id: string, fetchFunc?: () => any, options?: CacheItemOptions) {
+  async get(id: string, fetchFunc?: () => T | null, options?: CacheItemOptions) {
     const item = this.getOnly(id);
     if (item) {
       return item;
@@ -77,7 +77,7 @@ export class Neocache {
           this.cache.size >= (this.options.maxSize ?? Number.POSITIVE_INFINITY)
         ) {
           this.oldCache = this.cache;
-          this.cache = new Map<string, CacheItem>();
+          this.cache = new Map<string, CacheItem<T>>();
         }
 
         return item.data;
@@ -104,7 +104,7 @@ export class Neocache {
     return ret;
   }
 
-  set(id: string, data: any, options?: CacheItemOptions) {
+  set(id: string, data: T, options?: CacheItemOptions) {
     const expireTimeMs =
       options?.expireTimeMs ?? this.options.defaultExpireTimeMs;
     const expireTime = expireTimeMs
@@ -115,7 +115,7 @@ export class Neocache {
 
     if (this.cache.size >= (this.options.maxSize ?? Number.POSITIVE_INFINITY)) {
       this.oldCache = this.cache;
-      this.cache = new Map<string, CacheItem>();
+      this.cache = new Map<string, CacheItem<T>>();
     }
 
     if (
