@@ -209,7 +209,7 @@ class TinyLRUImpl<T> implements CacheImplementation<T> {
   }
 
   get(key: string): T | null {
-    return this.cache.get(key);
+    return this.cache.get(key) as T | null;
   }
 
   reset(): void {

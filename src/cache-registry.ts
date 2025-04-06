@@ -7,7 +7,7 @@ type CacheOptions = {
 };
 
 export class CacheRegistry {
-  private caches = new Map<string, Neocache>();
+  private caches = new Map<string, Neocache<any>>();
   private defaultOptions: CacheOptions;
   private statsReportingInterval: NodeJS.Timeout | null = null;
 
@@ -19,12 +19,12 @@ export class CacheRegistry {
    * Create a new cache with the given name
    * @throws Error if a cache with the name already exists
    */
-  createCache(name: string, options?: CacheOptions): Neocache {
+  createCache(name: string, options?: CacheOptions): Neocache<any> {
     if (this.caches.has(name)) {
       throw new Error(`Cache with name '${name}' already exists.`);
     }
 
-    const cache = new Neocache({
+    const cache = new Neocache<any>({
       ...this.defaultOptions,
       ...options,
     });
@@ -36,11 +36,11 @@ export class CacheRegistry {
   /**
    * Get or create a cache with the given name
    */
-  getCache(name: string, options?: CacheOptions): Neocache {
+  getCache(name: string, options?: CacheOptions): Neocache<any>{
     if (!this.caches.has(name)) {
       this.caches.set(
         name,
-        new Neocache({
+        new Neocache<any>({
           ...this.defaultOptions,
           ...options,
         }),
