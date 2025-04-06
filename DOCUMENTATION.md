@@ -4,17 +4,22 @@ Neocache is a minimal, efficient in-memory cache library for Node.js application
 
 ## Table of Contents
 
+- [Table of Contents](#table-of-contents)
 - [Installation](#installation)
 - [Basic Usage](#basic-usage)
 - [API Reference](#api-reference)
   - [Neocache Class](#neocache-class)
   - [Configuration Options](#configuration-options)
   - [Methods](#methods)
+  - [Cache Item Options](#cache-item-options)
 - [Cache Strategies](#cache-strategies)
   - [Expiration](#expiration)
   - [LRU Eviction](#lru-eviction)
 - [Benchmarking](#benchmarking)
 - [Examples](#examples)
+  - [Basic Caching](#basic-caching)
+  - [Automatic Data Loading](#automatic-data-loading)
+  - [LRU Cache for API Responses](#lru-cache-for-api-responses)
 
 ## Installation
 
@@ -91,7 +96,7 @@ The `CacheOptions` object can include:
 #### get
 
 ```typescript
-async get(id: string, fetchFunc?: () => any, options?: CacheItemOptions): Promise<any>
+async get(id: string, fetchFunc?: () => T | null, options?: CacheItemOptions): Promise<T | null>
 ```
 
 Retrieves an item from the cache by ID. If the item doesn't exist or has expired, an optional fetch function can be provided to load the data.
@@ -104,7 +109,7 @@ Retrieves an item from the cache by ID. If the item doesn't exist or has expired
 #### getRandomItems
 
 ```typescript
-async getRandomItems(count: number): Promise<any[]>
+async getRandomItems(count: number): Promise<T[]>
 ```
 
 Returns a specified number of random non-expired items from the cache.
@@ -115,7 +120,7 @@ Returns a specified number of random non-expired items from the cache.
 #### set
 
 ```typescript
-set(id: string, data: any, options?: CacheItemOptions): void
+set(id: string, data: T, options?: CacheItemOptions): void
 ```
 
 Stores an item in the cache.

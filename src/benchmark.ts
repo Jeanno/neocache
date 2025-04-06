@@ -9,10 +9,10 @@ import * as tinyLru from 'tiny-lru';
 /**
  * Interface for all cache implementations to ensure consistent benchmarking
  */
-interface CacheImplementation {
+interface CacheImplementation<T> {
   name: string;
-  set(key: string, value: any): void;
-  get(key: string): any;
+  set(key: string, value: T): void;
+  get(key: string): T | null;
   dispose?(): void;
   reset(): void;
 }
@@ -20,9 +20,9 @@ interface CacheImplementation {
 /**
  * Neocache implementation
  */
-class NeocacheImpl implements CacheImplementation {
+class NeocacheImpl<T> implements CacheImplementation<T> {
   name = 'Neocache';
-  private cache: Neocache;
+  private cache: Neocache<T>;
   private options?: {
     maxSize?: number;
     defaultExpireTimeMs?: number;
@@ -38,11 +38,11 @@ class NeocacheImpl implements CacheImplementation {
     this.cache = new Neocache(options);
   }
 
-  set(key: string, value: any): void {
+  set(key: string, value: T): void {
     this.cache.set(key, value);
   }
 
-  get(key: string): any {
+  get(key: string): T | null {
     return this.cache.getOnly(key);
   }
 
@@ -59,7 +59,7 @@ class NeocacheImpl implements CacheImplementation {
 /**
  * node-cache implementation
  */
-class NodeCacheImpl implements CacheImplementation {
+class NodeCacheImpl<T> implements CacheImplementation<T> {
   name = 'node-cache';
   private cache: NodeCache;
   private options?: { maxSize?: number; defaultExpireTimeMs?: number };
@@ -75,11 +75,11 @@ class NodeCacheImpl implements CacheImplementation {
     });
   }
 
-  set(key: string, value: any): void {
+  set(key: string, value: T): void {
     this.cache.set(key, value);
   }
 
-  get(key: string): any {
+  get(key: string): T | null {
     return this.cache.get(key);
   }
 
@@ -101,9 +101,9 @@ class NodeCacheImpl implements CacheImplementation {
 /**
  * lru-cache implementation
  */
-class LRUCacheImpl implements CacheImplementation {
+class LRUCacheImpl<T> implements CacheImplementation<T> {
   name = 'lru-cache';
-  private cache: LRUCache<string, any>;
+  private cache: LRUCache<string, T>;
   private options?: { maxSize?: number; defaultExpireTimeMs?: number };
 
   constructor(options?: { maxSize?: number; defaultExpireTimeMs?: number }) {
@@ -114,11 +114,11 @@ class LRUCacheImpl implements CacheImplementation {
     });
   }
 
-  set(key: string, value: any): void {
+  set(key: string, value: T): void {
     this.cache.set(key, value);
   }
 
-  get(key: string): any {
+  get(key: string): T | null {
     return this.cache.get(key);
   }
 
@@ -133,9 +133,9 @@ class LRUCacheImpl implements CacheImplementation {
 /**
  * quick-lru implementation
  */
-class QuickLRUImpl implements CacheImplementation {
+class QuickLRUImpl<T> implements CacheImplementation<T> {
   name = 'quick-lru';
-  private cache: QuickLRU<string, any>;
+  private cache: QuickLRU<string, T>;
   private options?: { maxSize?: number; defaultExpireTimeMs?: number };
 
   constructor(options?: { maxSize?: number; defaultExpireTimeMs?: number }) {
@@ -146,11 +146,11 @@ class QuickLRUImpl implements CacheImplementation {
     });
   }
 
-  set(key: string, value: any): void {
+  set(key: string, value: T): void {
     this.cache.set(key, value);
   }
 
-  get(key: string): any {
+  get(key: string): T | null {
     return this.cache.get(key);
   }
 
@@ -166,7 +166,7 @@ class QuickLRUImpl implements CacheImplementation {
 /**
  * memory-cache implementation
  */
-class MemoryCacheImpl implements CacheImplementation {
+class MemoryCacheImpl<T> implements CacheImplementation<T> {
   name = 'memory-cache';
   private options?: { maxSize?: number; defaultExpireTimeMs?: number };
 
@@ -175,11 +175,11 @@ class MemoryCacheImpl implements CacheImplementation {
     // memory-cache doesn't have constructor options, we'll handle ttl in the set method
   }
 
-  set(key: string, value: any): void {
+  set(key: string, value: T): void {
     memoryCache.put(key, value, this.options?.defaultExpireTimeMs);
   }
 
-  get(key: string): any {
+  get(key: string): T | null {
     return memoryCache.get(key);
   }
 
@@ -191,7 +191,7 @@ class MemoryCacheImpl implements CacheImplementation {
 /**
  * tiny-lru implementation
  */
-class TinyLRUImpl implements CacheImplementation {
+class TinyLRUImpl<T> implements CacheImplementation<T> {
   name = 'tiny-lru';
   private cache: ReturnType<typeof tinyLru.lru>;
   private options?: { maxSize?: number; defaultExpireTimeMs?: number };
@@ -204,12 +204,12 @@ class TinyLRUImpl implements CacheImplementation {
     );
   }
 
-  set(key: string, value: any): void {
+  set(key: string, value: T): void {
     this.cache.set(key, value);
   }
 
-  get(key: string): any {
-    return this.cache.get(key);
+  get(key: string): T | null {
+    return this.cache.get(key) as T | null;
   }
 
   reset(): void {
@@ -225,9 +225,9 @@ class TinyLRUImpl implements CacheImplementation {
  * Benchmarking class that works with any cache implementation
  */
 class CacheBenchmark {
-  private cache: CacheImplementation;
+  private cache: CacheImplementation<string>;
 
-  constructor(cacheImpl: CacheImplementation) {
+  constructor(cacheImpl: CacheImplementation<string>) {
     this.cache = cacheImpl;
   }
 
@@ -447,7 +447,7 @@ async function runComparativeBenchmarks() {
     purgeIntervalMs: null,
   };
 
-  const cacheImplementations: CacheImplementation[] = [
+  const cacheImplementations: CacheImplementation<string>[] = [
     new NeocacheImpl(cacheOptions),
     new LRUCacheImpl(cacheOptions),
     new QuickLRUImpl(cacheOptions),
@@ -569,7 +569,7 @@ async function runComparativeFixedSizeBenchmark() {
     purgeIntervalMs: null,
   };
 
-  const fixedSizeCacheImpls = [
+  const fixedSizeCacheImpls: CacheImplementation<string>[] = [
     new NodeCacheImpl(config),
     new MemoryCacheImpl(config),
     new LRUCacheImpl(config),
@@ -632,7 +632,7 @@ async function runOriginalBenchmarks() {
   // Basic set operations
   const setOperations = [10000, 1000000, 10000000];
   for (const count of setOperations) {
-    const impl = new NeocacheImpl({ maxSize: 10000 });
+    const impl = new NeocacheImpl<string>({ maxSize: 10000 });
     const benchmark = new CacheBenchmark(impl);
     benchmark.resetCache(); // Reset cache before benchmark
     const time = await benchmark.benchmarkSet(count);
@@ -650,7 +650,7 @@ async function runOriginalBenchmarks() {
   // Basic get operations
   const getOperations = [100000, 1000000, 10000000];
   for (const count of getOperations) {
-    const impl = new NeocacheImpl();
+    const impl = new NeocacheImpl<string>();
     const benchmark = new CacheBenchmark(impl);
     benchmark.resetCache();
     const time = await benchmark.benchmarkGet(count);
@@ -666,7 +666,7 @@ async function runOriginalBenchmarks() {
   console.log('');
 
   // LRU eviction benchmark
-  const lruImpl = new NeocacheImpl();
+  const lruImpl = new NeocacheImpl<string>();
   const lruBenchmark = new CacheBenchmark(lruImpl);
   lruBenchmark.resetCache();
   const lruEvictionTime = await lruBenchmark.benchmarkLRUEviction(
@@ -683,7 +683,7 @@ async function runOriginalBenchmarks() {
   console.log('');
 
   // Mixed operations
-  const mixedImpl = new NeocacheImpl({ maxSize: 500000 });
+  const mixedImpl = new NeocacheImpl<string>({ maxSize: 500000 });
   const mixedBenchmark = new CacheBenchmark(mixedImpl);
   mixedBenchmark.resetCache();
   const mixedTime = await mixedBenchmark.benchmarkMixedOperations(500000);
