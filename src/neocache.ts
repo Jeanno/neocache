@@ -15,7 +15,7 @@ export type CacheOptions = {
   maxSize?: number;
 };
 
-export class Neocache<T> {
+export class Neocache<T = any> {
   static instance = new Neocache();
   private static _cacheRegistry: CacheRegistry = null;
 
@@ -47,7 +47,11 @@ export class Neocache<T> {
     }
   }
 
-  async get(id: string, fetchFunc?: () => T | null, options?: CacheItemOptions) {
+  async get(
+    id: string,
+    fetchFunc?: () => T | null,
+    options?: CacheItemOptions
+  ): Promise<T | null> {
     const item = this.getOnly(id);
     if (item) {
       return item;
@@ -62,7 +66,7 @@ export class Neocache<T> {
     return data;
   }
 
-  getOnly(id: string) {
+  getOnly(id: string): T | null {
     if (this.cache.has(id)) {
       const item = this.cache.get(id);
       if (item.expireTime > Date.now()) {
@@ -90,7 +94,7 @@ export class Neocache<T> {
    * Returns a certain amount of random items from the cache.
    * They must not be expired.
    */
-  async getRandomItems(count: number) {
+  async getRandomItems(count: number): Promise<T[]> {
     const keys = Array.from(this.cache.keys());
     const randomKeys = keys.sort(() => Math.random() - 0.5);
     const ret = [];
