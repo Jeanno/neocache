@@ -1,3 +1,5 @@
+[![npm version](https://img.shields.io/npm/v/neocache.svg?style=flat)](https://www.npmjs.com/package/neocache) [![(Runtime) Build and Test](https://github.com/Jeanno/neocache/actions/workflows/test.yml/badge.svg)](https://github.com/Jeanno/neocache/actions/workflows/test.yml)
+
 # Neocache
 
 ## Overview
