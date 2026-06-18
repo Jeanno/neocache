@@ -91,6 +91,50 @@ export class Neocache<T = any> {
   }
 
   /**
+   * Resolves multiple ids at once, behaving like calling `get` for each id.
+   * Cache misses are collected and passed to `fetchFunc` in a single batch
+   * call, letting the caller fetch them efficiently (e.g. one query). The
+   * fetcher returns a Map of id -> value; ids absent from it (or missed with no
+   * fetcher) resolve to null. The returned Map contains every requested id.
+   */
+  async getAll(
+    ids: string[],
+    fetchFunc?: (missingIds: string[]) => Promise<Map<string, T>> | Map<string, T>,
+    options?: CacheItemOptions
+  ): Promise<Map<string, T | null>> {
+    const result = new Map<string, T | null>();
+    const missingIds: string[] = [];
+
+    for (const id of ids) {
+      if (result.has(id)) {
+        continue;
+      }
+      const item = this.getOnly(id);
+      if (item) {
+        result.set(id, item);
+      } else {
+        result.set(id, null);
+        missingIds.push(id);
+      }
+    }
+
+    if (missingIds.length === 0 || !fetchFunc) {
+      return result;
+    }
+
+    const fetched = await fetchFunc(missingIds);
+    for (const id of missingIds) {
+      const value = fetched.get(id);
+      if (value !== undefined) {
+        this.set(id, value, options);
+        result.set(id, value);
+      }
+    }
+
+    return result;
+  }
+
+  /**
    * Returns a certain amount of random items from the cache.
    * They must not be expired.
    */

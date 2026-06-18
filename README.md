@@ -93,6 +93,29 @@ const myCache = new Neocache({
 });
 ```
 
+### Batch retrieval
+
+Use `getAll` to resolve many ids at once. It behaves like calling `get` for each
+id, but collects all the cache misses and hands them to a single fetcher — so you
+can load them in one efficient round-trip instead of one fetch per miss.
+
+```javascript
+const cache = new Neocache();
+
+// Returns a Map keyed by every requested id.
+const users = await cache.getAll(
+  ['user1', 'user2', 'user3'],
+  async (missingIds) => {
+    // Called once with the ids not already cached.
+    const rows = await db.query('SELECT * FROM users WHERE id IN (?)', [missingIds]);
+    // Return a Map of id -> value. Ids absent from the Map resolve to null.
+    return new Map(rows.map((row) => [row.id, row]));
+  }
+);
+
+users.get('user1'); // cached or freshly fetched value, or null on a miss
+```
+
 ### LRU Eviction
 
 The cache uses a Least Recently Used (LRU) eviction strategy. When the cache reaches its maximum size, the least recently used items will be evicted to make room for new items.

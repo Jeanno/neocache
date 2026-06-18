@@ -106,6 +106,23 @@ Retrieves an item from the cache by ID. If the item doesn't exist or has expired
 - **options**: Optional configuration for this specific cache item
 - **Returns**: The cached data or null if not found and no fetchFunc provided
 
+#### getAll
+
+```typescript
+async getAll(
+  ids: string[],
+  fetchFunc?: (missingIds: string[]) => Promise<Map<string, T>> | Map<string, T>,
+  options?: CacheItemOptions
+): Promise<Map<string, T | null>>
+```
+
+Resolves multiple ids at once, behaving like calling `get` for each id. Cache misses are collected and passed to `fetchFunc` in a single batch call, letting you fetch them efficiently (e.g. one `SELECT ... WHERE id IN (...)` query) instead of one fetch per miss.
+
+- **ids**: The ids to retrieve
+- **fetchFunc**: Optional batch fetcher called once with all missed ids; returns a `Map` of id → value
+- **options**: Optional configuration applied to each fetched item when caching it
+- **Returns**: A `Map` containing every requested id. Ids that miss and are not returned by the fetcher (or any miss when no `fetchFunc` is given) resolve to `null`.
+
 #### getRandomItems
 
 ```typescript

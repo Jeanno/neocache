@@ -182,6 +182,138 @@ test('expired items free up slots for new items', async () => {
   cache.dispose();
 });
 
+test('getAll returns all cached values without calling fetcher', async () => {
+  const cache = new Neocache();
+  cache.set('a', 1);
+  cache.set('b', 2);
+
+  let fetcherCalled = false;
+  const result = await cache.getAll(['a', 'b'], () => {
+    fetcherCalled = true;
+    return new Map();
+  });
+
+  expect(fetcherCalled).toBe(false);
+  expect(result.get('a')).toBe(1);
+  expect(result.get('b')).toBe(2);
+  cache.dispose();
+});
+
+test('getAll fetches all misses in a single batch call', async () => {
+  const cache = new Neocache();
+
+  const calls: string[][] = [];
+  const result = await cache.getAll(['a', 'b', 'c'], (missingIds) => {
+    calls.push(missingIds);
+    return new Map(missingIds.map((id) => [id, `v-${id}`]));
+  });
+
+  expect(calls.length).toBe(1);
+  expect(calls[0].sort()).toEqual(['a', 'b', 'c']);
+  expect(result.get('a')).toBe('v-a');
+  expect(result.get('b')).toBe('v-b');
+  expect(result.get('c')).toBe('v-c');
+  // Fetched values are now cached.
+  expect(await cache.get('a')).toBe('v-a');
+  cache.dispose();
+});
+
+test('getAll only fetches the missed ids', async () => {
+  const cache = new Neocache();
+  cache.set('a', 1);
+
+  let requested: string[] = [];
+  const result = await cache.getAll(['a', 'b'], (missingIds) => {
+    requested = missingIds;
+    return new Map(missingIds.map((id) => [id, `v-${id}`]));
+  });
+
+  expect(requested).toEqual(['b']);
+  expect(result.get('a')).toBe(1);
+  expect(result.get('b')).toBe('v-b');
+  cache.dispose();
+});
+
+test('getAll maps ids absent from the fetcher result to null', async () => {
+  const cache = new Neocache();
+
+  const result = await cache.getAll(['a', 'b'], () => new Map([['a', 1]]));
+
+  expect(result.get('a')).toBe(1);
+  expect(result.get('b')).toBeNull();
+  cache.dispose();
+});
+
+test('getAll maps misses to null when no fetcher is provided', async () => {
+  const cache = new Neocache();
+  cache.set('a', 1);
+
+  const result = await cache.getAll(['a', 'b']);
+
+  expect(result.get('a')).toBe(1);
+  expect(result.get('b')).toBeNull();
+  cache.dispose();
+});
+
+test('getAll returns an empty map for empty input without calling fetcher', async () => {
+  const cache = new Neocache();
+
+  let fetcherCalled = false;
+  const result = await cache.getAll([], () => {
+    fetcherCalled = true;
+    return new Map();
+  });
+
+  expect(fetcherCalled).toBe(false);
+  expect(result.size).toBe(0);
+  cache.dispose();
+});
+
+test('getAll dedupes ids but returns every requested id', async () => {
+  const cache = new Neocache();
+
+  const calls: string[][] = [];
+  const result = await cache.getAll(['a', 'a', 'b'], (missingIds) => {
+    calls.push(missingIds);
+    return new Map(missingIds.map((id) => [id, `v-${id}`]));
+  });
+
+  expect(calls.length).toBe(1);
+  expect(calls[0].sort()).toEqual(['a', 'b']);
+  expect(result.get('a')).toBe('v-a');
+  expect(result.get('b')).toBe('v-b');
+  cache.dispose();
+});
+
+test('getAll treats expired entries as misses', async () => {
+  const cache = new Neocache();
+  cache.set('a', 1, { expireTimeMs: 50 });
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  const result = await cache.getAll(['a'], () => new Map([['a', 2]]));
+
+  expect(result.get('a')).toBe(2);
+  cache.dispose();
+});
+
+test('getAll returns items promoted from the old cache', async () => {
+  const cache = new Neocache({ maxSize: 2 });
+  // Fill enough to rotate 'a' into the old cache.
+  cache.set('a', 1);
+  cache.set('b', 2);
+  cache.set('c', 3);
+
+  let fetcherCalled = false;
+  const result = await cache.getAll(['a'], () => {
+    fetcherCalled = true;
+    return new Map();
+  });
+
+  expect(fetcherCalled).toBe(false);
+  expect(result.get('a')).toBe(1);
+  cache.dispose();
+});
+
 test('cache registry helper', () => {
   const registry = Neocache.cacheRegistry;
   expect(registry).toBeTruthy();
